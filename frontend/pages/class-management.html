@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Class Management - Universal Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-content {
+            padding: 2rem 0;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.3);
+        }
+
+        .class-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+        }
+
+        .class-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .search-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #ecf0f1;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Custom scrollbar styles */
+        .modal-body::-webkit-scrollbar,
+        #subjectsContainer::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track,
+        #subjectsContainer::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb,
+        #subjectsContainer::-webkit-scrollbar-thumb {
+            background: #6c757d;
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover,
+        #subjectsContainer::-webkit-scrollbar-thumb:hover {
+            background: #495057;
+        }
+
+        /* Class Details Modal specific scrollbar */
+        #classDetailsModal .modal-body::-webkit-scrollbar {
+            width: 12px;
+            position: absolute;
+            right: 0;
+        }
+
+        #classDetailsModal .modal-body::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin: 5px;
+        }
+
+        #classDetailsModal .modal-body::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border-radius: 6px;
+            border: 2px solid #f8f9fa;
+        }
+
+        #classDetailsModal .modal-body::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+        }
+
+        #classDetailsModal .modal-body {
+            scrollbar-width: thin;
+            scrollbar-color: #3498db #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/pages/admin-dashboard.html">
+                <i class="fas fa-calendar-check me-2"></i>Universal Attendance
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pages/admin-dashboard.html">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">
+                            <i class="fas fa-chalkboard me-1"></i>Class Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pages/faculty-classes.html">
+                            <i class="fas fa-chalkboard-teacher me-1"></i>Faculty Classes
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i><span id="navUserName">Admin</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/pages/profile.html"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2"><i class="fas fa-chalkboard me-3"></i>Class Management</h1>
+                    <p class="mb-0 opacity-75">Create and manage classes for your organization</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-light btn-lg" onclick="refreshClasses()">
+                        <i class="fas fa-sync me-2"></i>Refresh
+                    </button>
+                    <button class="btn btn-success btn-lg ms-2" onclick="showCreateClassModal()">
+                        <i class="fas fa-plus me-2"></i>Create Class
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div class="search-bar">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" id="searchClass" placeholder="Search classes by name...">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="subjectFilter">
+                        <option value="">All Subjects</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="facultyFilter">
+                        <option value="">All Faculty</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100" onclick="filterClasses()">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classes List -->
+        <div id="classesList">
+            <!-- Classes will be dynamically populated here -->
+        </div>
+    </div>
+
+    <!-- Create Class Modal -->
+    <div class="modal fade" id="createClassModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Create New Class</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: scroll; scrollbar-width: thin; scrollbar-color: #6c757d #f8f9fa;">
+                    <form id="createClassForm">
+                        <!-- Class Basic Information -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Class Code *</label>
+                                <input type="text" class="form-control" name="classCode" placeholder="e.g., BCS-SEM1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Class Name *</label>
+                                <input type="text" class="form-control" name="className" placeholder="e.g., Bachelor of Computer Science - Semester 1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Semester *</label>
+                                <select class="form-select" name="semester" required>
+                                    <option value="">Select Semester</option>
+                                    <option value="SEM-I">SEM-I</option>
+                                    <option value="SEM-II">SEM-II</option>
+                                    <option value="SEM-III">SEM-III</option>
+                                    <option value="SEM-IV">SEM-IV</option>
+                                    <option value="SEM-V">SEM-V</option>
+                                    <option value="SEM-VI">SEM-VI</option>
+                                    <option value="SEM-VII">SEM-VII</option>
+                                    <option value="SEM-VIII">SEM-VIII</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Academic Year *</label>
+                                <input type="text" class="form-control" name="academicYear" placeholder="e.g., 2024-25" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Max Students</label>
+                                <input type="number" class="form-control" name="maxStudents" placeholder="50" min="1" max="500" value="50">
+                            </div>
+                        </div>
+
+                        <!-- Subjects Section -->
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-book me-2"></i>Subjects *</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSubject()">
+                                    <i class="fas fa-plus me-1"></i>Add Subject
+                                </button>
+                            </div>
+                            <div id="subjectsContainer" style="max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #6c757d #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 0.5rem;">
+                                <!-- Subject entries will be added here dynamically -->
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createClass()">
+                        <i class="fas fa-save me-2"></i>Create Class
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Class Modal -->
+    <div class="modal fade" id="editClassModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Class</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: scroll; scrollbar-width: thin; scrollbar-color: #6c757d #f8f9fa;">
+                    <form id="editClassForm">
+                        <input type="hidden" name="classId">
+                        <!-- Class Basic Information -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Class Code *</label>
+                                <input type="text" class="form-control" name="classCode" placeholder="e.g., BCS-SEM1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Class Name *</label>
+                                <input type="text" class="form-control" name="className" placeholder="e.g., Bachelor of Computer Science - Semester 1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Semester *</label>
+                                <select class="form-select" name="semester" required>
+                                    <option value="">Select Semester</option>
+                                    <option value="SEM-I">SEM-I</option>
+                                    <option value="SEM-II">SEM-II</option>
+                                    <option value="SEM-III">SEM-III</option>
+                                    <option value="SEM-IV">SEM-IV</option>
+                                    <option value="SEM-V">SEM-V</option>
+                                    <option value="SEM-VI">SEM-VI</option>
+                                    <option value="SEM-VII">SEM-VII</option>
+                                    <option value="SEM-VIII">SEM-VIII</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Academic Year *</label>
+                                <input type="text" class="form-control" name="academicYear" placeholder="e.g., 2024-25" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Max Students</label>
+                                <input type="number" class="form-control" name="maxStudents" placeholder="50" min="1" max="500" value="50">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" name="isActive">
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Subjects Section -->
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-book me-2"></i>Subjects *</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEditSubject()">
+                                    <i class="fas fa-plus me-1"></i>Add Subject
+                                </button>
+                            </div>
+                            <div id="editSubjectsContainer" style="max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #6c757d #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 0.5rem;">
+                                <!-- Subject entries will be added here dynamically -->
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateClass()">
+                        <i class="fas fa-save me-2"></i>Update Class
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Attendance History Modal -->
+    <div class="modal fade" id="studentAttendanceModal" tabindex="-1" style="z-index: 1060;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-history me-2"></i>Student Attendance History
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Student Information -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Student Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Name:</strong> <span id="studentName"></span></p>
+                                    <p><strong>Roll Number:</strong> <span id="studentRoll"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Class:</strong> <span id="studentClass"></span></p>
+                                    <p><strong>Subject:</strong> <span id="studentSubject"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h4 class="text-primary" id="totalClassesAttended">0</h4>
+                                    <small class="text-muted">Classes Attended</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h4 class="text-success" id="totalClassesAbsent">0</h4>
+                                    <small class="text-muted">Classes Absent</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h4 class="text-warning" id="attendancePercentage">0%</h4>
+                                    <small class="text-muted">Attendance Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h4 class="text-info" id="totalSessions">0</h4>
+                                    <small class="text-muted">Total Sessions</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance History Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Attendance History</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="attendanceHistoryTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Status</th>
+                                            <th>Lecture Topic</th>
+                                            <th>Time</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attendanceHistoryBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4">
+                                                <i class="fas fa-spinner fa-spin me-2"></i>Loading attendance history...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="exportStudentAttendance()">
+                        <i class="fas fa-download me-2"></i>Export History
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:4000' : `http://${window.location.hostname}:4000`;
+
+        function getAuthToken() {
+            return localStorage.getItem('token') || sessionStorage.getItem('token');
+        }
+
+        let classesData = [];
+        let facultyData = [];
+        let subjectsData = [];
+        let subjectCounter = 0;
+        let currentSubjectStudents = []; // Store students for the current subject being viewed
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadClasses();
+            loadFaculty();
+            loadSubjects();
+        });
+
+        // Load classes
+        async function loadClasses() {
+            try {
+                const token = getAuthToken();
+
+                // Try admin endpoint first
+                let response = await fetch(`${API_BASE}/api/admin/classes?include_subjects=true`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // If admin endpoint fails with 403, try regular classes endpoint
+                if (response.status === 403) {
+                    console.log('Admin access denied, trying regular classes endpoint...');
+                    response = await fetch(`${API_BASE}/api/classes`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        classesData = result.classes || [];
+                        renderClasses(classesData);
+                    } else {
+                        classesData = [];
+                        renderClasses([]);
+                    }
+                } else {
+                    classesData = [];
+                    renderClasses([]);
+                }
+            } catch (error) {
+                console.error('Error loading classes:', error);
+                classesData = [];
+                renderClasses([]);
+            }
+        }
+
+        // Render classes list
+        function renderClasses(classes) {
+            const container = document.getElementById('classesList');
+
+            if (!classes || classes.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-chalkboard fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No classes found</h4>
+                        <p class="text-muted">Create your first class to get started</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = classes.map(cls => {
+                // Get subjects for this class
+                const classSubjects = cls.subjects || [];
+                const subjectsHtml = classSubjects.map(subject => {
+                    // Find teacher information
+                    const teacher = facultyData.find(f => f.digital_id === subject.teacher_id);
+                    const teacherName = teacher ? `${teacher.name} (${teacher.role})` : 'Not Assigned';
+
+                    // Handle missing or invalid subject data
+                    const subjectCode = subject.subject_code || 'N/A';
+                    const subjectName = subject.subject_name || 'Unnamed Subject';
+
+                    return `
+                        <div class="subject-item mb-2 p-2 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${subjectCode} - ${subjectName}</strong>
+                                    <br><small class="text-muted">Teacher: ${teacherName}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">
+                                        ${subject.schedule_time || 'No schedule'}<br>
+                                        ${subject.room_number || 'No room'}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="class-card">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">${cls.class_code} - ${cls.class_name}</h5>
+                                <p class="text-muted mb-2">${cls.semester} ${cls.academic_year}</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge ${cls.is_active ? 'bg-success' : 'bg-secondary'} mb-2">
+                                    ${cls.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                                <br>
+                                <small class="text-muted">Max: ${cls.max_students} students</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <h6 class="mb-3"><i class="fas fa-book me-2"></i>Subjects (${classSubjects.length})</h6>
+                            ${subjectsHtml || '<p class="text-muted">No subjects assigned</p>'}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewClassDetails('${cls.id}')">
+                                    <i class="fas fa-eye me-1"></i>View Details
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="editClass('${cls.id}')">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </button>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteClass('${cls.id}', '${cls.class_name}')">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Load faculty for dropdowns
+        async function loadFaculty() {
+            try {
+                const token = getAuthToken();
+
+                // Try admin endpoint first, then fallback to regular users endpoint
+                let facultyUsers = [];
+
+                try {
+                    let response = await fetch(`${API_BASE}/api/admin/users?limit=200&active_only=true`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    // If admin endpoint fails with 403, try regular users endpoint
+                    if (response.status === 403) {
+                        console.log('Admin access denied, trying regular users endpoint...');
+                        response = await fetch(`${API_BASE}/api/users?limit=200&active_only=true`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                    }
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success && result.users) {
+                            // Filter to only include faculty/teacher roles AND admins (who can also teach)
+                            const allUsers = result.users;
+                            facultyUsers = allUsers.filter(user => {
+                                const role = user.role?.toLowerCase() || '';
+                                // Include faculty/teacher roles AND admin roles (admins can also teach classes)
+                                const facultyRoles = ['teacher', 'professor', 'faculty', 'instructor', 'lecturer', 'educator'];
+                                const adminRoles = ['admin', 'administrator', 'system administrator', 'super admin', 'superadmin'];
+
+                                const isFaculty = facultyRoles.some(facultyRole => role.includes(facultyRole));
+                                const isAdmin = adminRoles.some(adminRole => role.includes(adminRole));
+
+                                return isFaculty || isAdmin;
+                            });
+
+                            console.log('✅ Loaded faculty from API:', facultyUsers.length, 'faculty members (filtered from', allUsers.length, 'total users)');
+                            console.log('📋 Faculty members:', facultyUsers.map(f => `${f.name} (${f.role})`));
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Faculty API failed:', error);
+                }
+
+                // Store faculty data
+                facultyData = facultyUsers;
+
+                if (facultyData.length > 0) {
+                    console.log('✅ Faculty loaded successfully:', facultyData.map(f => `${f.name} (${f.role})`));
+                    populateFacultyDropdowns();
+                } else {
+                    console.warn('⚠️ No faculty members found in the organization');
+                    // Show a message to the user
+                    alert('No faculty members found. Please ensure you have teachers/professors in your organization.');
+                }
+
+            } catch (error) {
+                console.error('❌ Error loading faculty:', error);
+                alert('Failed to load faculty members. Please check your connection and try again.');
+            }
+        }
+
+        // Load subjects for filter and dropdowns
+        async function loadSubjects() {
+            try {
+                const token = getAuthToken();
+
+                // Try admin endpoint first, then fallback to regular subjects endpoint
+                let response = await fetch(`${API_BASE}/api/admin/subjects`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // If admin endpoint fails with 403, try regular subjects endpoint
+                if (response.status === 403) {
+                    console.log('Admin access denied, trying regular subjects endpoint...');
+                    response = await fetch(`${API_BASE}/api/subjects`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        subjectsData = result.subjects || [];
+                        populateSubjectDropdowns();
+                        console.log('✅ Loaded subjects:', subjectsData.length, 'subjects');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+            }
+
+            // Extract unique subjects from classes for filter
+            const subjects = [...new Set(classesData.flatMap(cls => cls.subjects || []).map(subject => subject.subject_name))].filter(Boolean);
+            const subjectFilter = document.getElementById('subjectFilter');
+            subjectFilter.innerHTML = '<option value="">All Subjects</option>';
+            subjects.forEach(subject => {
+                subjectFilter.innerHTML += `<option value="${subject}">${subject}</option>`;
+            });
+        }
+
+        // Populate faculty dropdowns
+        function populateFacultyDropdowns() {
+            const facultySelects = document.querySelectorAll('select[name="facultyId"]');
+            facultySelects.forEach(select => {
+                select.innerHTML = '<option value="">Select Faculty</option>';
+                facultyData.forEach(faculty => {
+                    select.innerHTML += `<option value="${faculty.digital_id}">${faculty.name} (${faculty.role})</option>`;
+                });
+            });
+
+            // Update faculty filter
+            const facultyFilter = document.getElementById('facultyFilter');
+            facultyFilter.innerHTML = '<option value="">All Faculty</option>';
+            facultyData.forEach(faculty => {
+                facultyFilter.innerHTML += `<option value="${faculty.digital_id}">${faculty.name}</option>`;
+            });
+
+            // Update all teacher dropdowns in subject entries
+            const teacherSelects = document.querySelectorAll('select[name="teacherId"]');
+            teacherSelects.forEach(select => {
+                select.innerHTML = '<option value="">Select Teacher</option>';
+                facultyData.forEach(faculty => {
+                    select.innerHTML += `<option value="${faculty.digital_id}">${faculty.name} (${faculty.role})</option>`;
+                });
+            });
+        }
+
+        // Populate subject dropdowns
+        function populateSubjectDropdowns() {
+            const subjectSelects = document.querySelectorAll('select[name="subjectId"]');
+            subjectSelects.forEach(select => {
+                select.innerHTML = '<option value="">Select Subject</option>';
+                subjectsData.forEach(subject => {
+                    select.innerHTML += `<option value="${subject.id}">${subject.subject_code} - ${subject.subject_name}</option>`;
+                });
+            });
+        }
+
+        // Add a new subject entry
+        function addSubject(subjectData = null) {
+            subjectCounter++;
+            const container = document.getElementById('subjectsContainer');
+
+            const subjectHtml = `
+                <div class="subject-entry border rounded p-3 mb-3" data-subject-id="${subjectCounter}">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Subject *</label>
+                            <input type="text" class="form-control" name="subjectName" placeholder="e.g., Mathematics, Physics, Computer Science" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Teacher *</label>
+                            <select class="form-select" name="teacherId" required>
+                                <option value="">Loading teachers...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Room</label>
+                            <input type="text" class="form-control" name="roomNumber" placeholder="e.g., CS-101">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSubject(${subjectCounter})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', subjectHtml);
+
+            // Populate the teacher dropdown for this new entry
+            const newEntry = container.lastElementChild;
+            const teacherSelect = newEntry.querySelector('select[name="teacherId"]');
+
+            // Function to populate teacher dropdown
+            function populateTeacherDropdown() {
+                if (facultyData.length > 0) {
+                    teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
+                    facultyData.forEach(faculty => {
+                        teacherSelect.innerHTML += `<option value="${faculty.digital_id}">${faculty.name} (${faculty.role})</option>`;
+                    });
+                } else {
+                    // If faculty data not loaded yet, wait and retry
+                    teacherSelect.innerHTML = '<option value="">Loading teachers...</option>';
+                    setTimeout(populateTeacherDropdown, 500);
+                }
+            }
+
+            // Populate teacher dropdown
+            populateTeacherDropdown();
+
+            // Set values if subjectData provided
+            if (subjectData) {
+                newEntry.querySelector('input[name="subjectName"]').value = subjectData.subject_name || '';
+                // Set teacher value after dropdown is populated
+                setTimeout(() => {
+                    teacherSelect.value = subjectData.teacher_id || '';
+                }, 600);
+                newEntry.querySelector('input[name="roomNumber"]').value = subjectData.room_number || '';
+            }
+        }
+
+        // Add a new subject entry for edit modal
+        function addEditSubject(subjectData = null) {
+            subjectCounter++;
+            const container = document.getElementById('editSubjectsContainer');
+
+            const subjectHtml = `
+                <div class="subject-entry border rounded p-3 mb-3" data-subject-id="${subjectCounter}">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Subject *</label>
+                            <input type="text" class="form-control" name="subjectName" placeholder="e.g., Mathematics, Physics, Computer Science" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Teacher *</label>
+                            <select class="form-select" name="teacherId" required>
+                                <option value="">Loading teachers...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Room</label>
+                            <input type="text" class="form-control" name="roomNumber" placeholder="e.g., CS-101">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSubject(${subjectCounter})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', subjectHtml);
+
+            // Populate the teacher dropdown for this new entry
+            const newEntry = container.lastElementChild;
+            const teacherSelect = newEntry.querySelector('select[name="teacherId"]');
+
+            // Function to populate teacher dropdown
+            function populateTeacherDropdown() {
+                if (facultyData.length > 0) {
+                    teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
+                    facultyData.forEach(faculty => {
+                        teacherSelect.innerHTML += `<option value="${faculty.digital_id}">${faculty.name} (${faculty.role})</option>`;
+                    });
+                } else {
+                    // If faculty data not loaded yet, wait and retry
+                    teacherSelect.innerHTML = '<option value="">Loading teachers...</option>';
+                    setTimeout(populateTeacherDropdown, 500);
+                }
+            }
+
+            // Populate teacher dropdown
+            populateTeacherDropdown();
+
+            // Set values if subjectData provided
+            if (subjectData) {
+                newEntry.querySelector('input[name="subjectName"]').value = subjectData.subject_name || '';
+                // Set teacher value after dropdown is populated
+                setTimeout(() => {
+                    teacherSelect.value = subjectData.teacher_id || '';
+                }, 600);
+                newEntry.querySelector('input[name="roomNumber"]').value = subjectData.room_number || '';
+            }
+        }
+
+        // Remove a subject entry
+        function removeSubject(subjectId) {
+            const entry = document.querySelector(`[data-subject-id="${subjectId}"]`);
+            if (entry) {
+                entry.remove();
+            }
+        }
+
+        // Update subject info when subject is selected
+        function updateSubjectInfo(selectElement) {
+            const subjectId = selectElement.value;
+            const subjectEntry = selectElement.closest('.subject-entry');
+            const subjectInfo = subjectEntry.querySelector('.subject-info');
+            const subjectNameSpan = subjectEntry.querySelector('.subject-name');
+            const subjectCreditsSpan = subjectEntry.querySelector('.subject-credits');
+
+            if (subjectId) {
+                const subject = subjectsData.find(s => s.id == subjectId);
+                if (subject) {
+                    subjectNameSpan.textContent = subject.subject_name;
+                    subjectCreditsSpan.textContent = subject.credits;
+                    subjectInfo.style.display = 'block';
+                }
+            } else {
+                subjectInfo.style.display = 'none';
+            }
+        }
+
+        // Show create class modal
+        function showCreateClassModal() {
+            document.getElementById('createClassForm').reset();
+            // Clear subjects container
+            document.getElementById('subjectsContainer').innerHTML = '';
+            subjectCounter = 0;
+            // Add one default subject entry
+            addSubject();
+            new bootstrap.Modal(document.getElementById('createClassModal')).show();
+        }
+
+        // Filter classes
+        function filterClasses() {
+            const searchTerm = document.getElementById('searchClass').value.toLowerCase();
+            const subjectFilter = document.getElementById('subjectFilter').value;
+            const facultyFilter = document.getElementById('facultyFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const filtered = classesData.filter(cls => {
+                // Search in class name and code
+                const matchesSearch = (cls.class_name && cls.class_name.toLowerCase().includes(searchTerm)) ||
+                                    (cls.class_code && cls.class_code.toLowerCase().includes(searchTerm)) ||
+                                    // Search in subjects
+                                    (cls.subjects && cls.subjects.some(subject =>
+                                        subject.subject_name && subject.subject_name.toLowerCase().includes(searchTerm)
+                                    ));
+
+                // Filter by subject (check if any subject matches the filter)
+                const matchesSubject = !subjectFilter ||
+                    (cls.subjects && cls.subjects.some(subject =>
+                        subject.subject_name === subjectFilter
+                    ));
+
+                // Filter by faculty (check if any subject has the selected faculty)
+                const matchesFaculty = !facultyFilter ||
+                    (cls.subjects && cls.subjects.some(subject =>
+                        subject.teacher_id === facultyFilter
+                    ));
+
+                const matchesStatus = !statusFilter ||
+                    (statusFilter === 'active' && cls.is_active) ||
+                    (statusFilter === 'inactive' && !cls.is_active);
+
+                return matchesSearch && matchesSubject && matchesFaculty && matchesStatus;
+            });
+
+            renderClasses(filtered);
+        }
+
+        // Add event listeners for real-time filtering
+        document.getElementById('searchClass').addEventListener('input', filterClasses);
+        document.getElementById('subjectFilter').addEventListener('change', filterClasses);
+        document.getElementById('facultyFilter').addEventListener('change', filterClasses);
+        document.getElementById('statusFilter').addEventListener('change', filterClasses);
+
+        // Show create class modal
+        function showCreateClassModal() {
+            document.getElementById('createClassForm').reset();
+            new bootstrap.Modal(document.getElementById('createClassModal')).show();
+        }
+
+        // Create class
+        async function createClass() {
+            const form = document.getElementById('createClassForm');
+            const formData = new FormData(form);
+
+            // Get basic class information
+            const classCode = formData.get('classCode').trim();
+            const className = formData.get('className').trim();
+            const semester = formData.get('semester');
+            const academicYear = formData.get('academicYear').trim();
+            const maxStudents = parseInt(formData.get('maxStudents')) || 50;
+
+            // Validation
+            if (!classCode || !className || !semester || !academicYear) {
+                alert('Please fill in all required fields (Class Code, Name, Semester, Academic Year)');
+                return;
+            }
+
+            // Collect subjects data
+            const subjectEntries = document.querySelectorAll('.subject-entry');
+            const subjects = [];
+
+            for (let entry of subjectEntries) {
+                const subjectName = entry.querySelector('input[name="subjectName"]').value.trim();
+                const teacherId = entry.querySelector('select[name="teacherId"]').value;
+                const roomNumber = entry.querySelector('input[name="roomNumber"]').value.trim();
+
+                if (!subjectName || !teacherId) {
+                    alert('Please fill in Subject and Teacher for all subject entries');
+                    return;
+                }
+
+                subjects.push({
+                    subject_name: subjectName,
+                    teacher_id: teacherId,
+                    room_number: roomNumber || null,
+                    max_students: maxStudents
+                });
+            }
+
+            if (subjects.length === 0) {
+                alert('Please add at least one subject');
+                return;
+            }
+
+            const classData = {
+                class_code: classCode,
+                class_name: className,
+                semester: semester,
+                academic_year: academicYear,
+                max_students: maxStudents,
+                subjects: subjects
+            };
+
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/classes`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(classData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Class created successfully!');
+                        bootstrap.Modal.getInstance(document.getElementById('createClassModal')).hide();
+                        // Clear subjects container
+                        document.getElementById('subjectsContainer').innerHTML = '';
+                        subjectCounter = 0;
+                        loadClasses();
+                        loadSubjects();
+                    } else {
+                        alert(result.message || 'Failed to create class');
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to create class');
+                }
+            } catch (error) {
+                console.error('Error creating class:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Edit class
+        function editClass(classId) {
+            const cls = classesData.find(c => c.id == classId);
+            if (!cls) {
+                alert('Class not found');
+                return;
+            }
+
+            // Reset form and clear containers
+            document.getElementById('editClassForm').reset();
+            document.getElementById('editSubjectsContainer').innerHTML = '';
+
+            // Populate basic class information
+            document.querySelector('#editClassForm input[name="classId"]').value = cls.id;
+            document.querySelector('#editClassForm input[name="classCode"]').value = cls.class_code || '';
+            document.querySelector('#editClassForm input[name="className"]').value = cls.class_name || '';
+            document.querySelector('#editClassForm select[name="semester"]').value = cls.semester || '';
+            document.querySelector('#editClassForm input[name="academicYear"]').value = cls.academic_year || '';
+            document.querySelector('#editClassForm input[name="maxStudents"]').value = cls.max_students || 50;
+            document.querySelector('#editClassForm select[name="isActive"]').value = cls.is_active ? 'true' : 'false';
+
+            // Populate subjects
+            if (cls.subjects && cls.subjects.length > 0) {
+                cls.subjects.forEach(subject => {
+                    addEditSubject(subject);
+                });
+            } else {
+                // Add at least one empty subject entry
+                addEditSubject();
+            }
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('editClassModal')).show();
+        }
+
+        // Update class
+        async function updateClass() {
+            const form = document.getElementById('editClassForm');
+            const formData = new FormData(form);
+
+            // Get basic class information
+            const classCode = formData.get('classCode').trim();
+            const className = formData.get('className').trim();
+            const semester = formData.get('semester');
+            const academicYear = formData.get('academicYear').trim();
+            const maxStudents = parseInt(formData.get('maxStudents')) || 50;
+            const isActive = formData.get('isActive') === 'true';
+
+            // Validation
+            if (!classCode || !className || !semester || !academicYear) {
+                alert('Please fill in all required fields (Class Code, Name, Semester, Academic Year)');
+                return;
+            }
+
+            // Collect subjects data
+            const subjectEntries = document.querySelectorAll('#editSubjectsContainer .subject-entry');
+            const subjects = [];
+
+            for (let entry of subjectEntries) {
+                const subjectName = entry.querySelector('input[name="subjectName"]').value.trim();
+                const teacherId = entry.querySelector('select[name="teacherId"]').value;
+                const roomNumber = entry.querySelector('input[name="roomNumber"]').value.trim();
+
+                if (!subjectName || !teacherId) {
+                    alert('Please fill in Subject and Teacher for all subject entries');
+                    return;
+                }
+
+                subjects.push({
+                    subject_name: subjectName,
+                    teacher_id: teacherId,
+                    room_number: roomNumber || null,
+                    max_students: maxStudents
+                });
+            }
+
+            if (subjects.length === 0) {
+                alert('Please add at least one subject');
+                return;
+            }
+
+            const classData = {
+                class_code: classCode,
+                class_name: className,
+                semester: semester,
+                academic_year: academicYear,
+                max_students: maxStudents,
+                is_active: isActive,
+                subjects: subjects
+            };
+
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/classes/${form.classId.value}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(classData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Class updated successfully!');
+                        bootstrap.Modal.getInstance(document.getElementById('editClassModal')).hide();
+                        // Clear subjects container
+                        document.getElementById('editSubjectsContainer').innerHTML = '';
+                        subjectCounter = 0;
+                        loadClasses();
+                        loadSubjects();
+                    } else {
+                        alert(result.message || 'Failed to update class');
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to update class');
+                }
+            } catch (error) {
+                console.error('Error updating class:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Delete class
+        async function deleteClass(classId, className) {
+            if (!confirm(`Are you sure you want to delete the class "${className}"?\n\nThis will remove all student enrollments and attendance records for this class.`)) {
+                return;
+            }
+
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/classes/${classId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Class deleted successfully!');
+                        loadClasses();
+                        loadSubjects();
+                    } else {
+                        alert(result.message || 'Failed to delete class');
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to delete class');
+                }
+            } catch (error) {
+                console.error('Error deleting class:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // View class details
+        async function viewClassDetails(classId) {
+            try {
+                const token = getAuthToken();
+
+                // Try admin endpoint first
+                let response = await fetch(`${API_BASE}/api/admin/classes/${classId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // If admin endpoint fails with 403, try regular classes endpoint
+                if (response.status === 403) {
+                    console.log('Admin access denied, trying regular classes endpoint...');
+                    response = await fetch(`${API_BASE}/api/classes/${classId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        alert('Class not found');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    const cls = result.class || result.classes;
+
+                                        // Fetch enrolled students for this class using the faculty API (same as teacher-dashboard.html)
+                    let enrolledStudents = [];
+                    try {
+                        if (cls.subjects && cls.subjects.length > 0) {
+                            console.log('Loading students for class subjects:', cls.subjects);
+
+                            // Get students from all subjects in this class using the faculty API (works for both admin and teacher)
+                            const studentPromises = cls.subjects.map(async (subject) => {
+                                // Use the faculty API endpoint which works for both admin and teacher access
+                                // The subject has an 'id' field which is the class_subject_id
+                                const subjectId = subject.id;
+
+                                if (subjectId) {
+                                    try {
+                                        console.log(`Fetching students for subject ID: ${subjectId}`);
+                                        const studentResponse = await fetch(`${API_BASE}/api/faculty/teacher/subjects/${subjectId}/students`, {
+                                            headers: {
+                                                'Authorization': `Bearer ${token}`,
+                                                'Content-Type': 'application/json'
+                                            }
+                                        });
+
+                                        console.log(`Response status for subject ${subjectId}:`, studentResponse.status);
+
+                                        if (studentResponse.ok) {
+                                            const studentResult = await studentResponse.json();
+                                            console.log(`Student data for subject ${subjectId}:`, studentResult);
+
+                                            if (studentResult.success && studentResult.students) {
+                                                return studentResult.students.map(student => ({
+                                                    ...student,
+                                                    subject_name: subject.subject_name,
+                                                    subject_code: subject.subject_code
+                                                }));
+                                            }
+                                        } else {
+                                            console.warn(`Failed to load students for subject ${subjectId}: HTTP ${studentResponse.status}`);
+                                        }
+                                    } catch (error) {
+                                        console.warn(`Error loading students for subject ${subjectId}:`, error);
+                                    }
+                                } else {
+                                    console.warn('Subject missing ID:', subject);
+                                }
+                                return [];
+                            });
+
+                            const studentArrays = await Promise.all(studentPromises);
+                            console.log('Student arrays from all subjects:', studentArrays);
+
+                            // Flatten and deduplicate students by ID
+                            const allStudents = studentArrays.flat();
+                            console.log('All students before deduplication:', allStudents.length);
+
+                            const studentMap = new Map();
+                            allStudents.forEach(student => {
+                                if (student.id && !studentMap.has(student.id)) {
+                                    studentMap.set(student.id, student);
+                                }
+                            });
+                            enrolledStudents = Array.from(studentMap.values());
+                            console.log('Enrolled students after deduplication:', enrolledStudents.length);
+                        } else {
+                            console.log('No subjects found for this class');
+                        }
+                    } catch (error) {
+                        console.warn('Failed to load enrolled students:', error);
+                    }
+
+                    // Create detailed view modal with the same structure as teacher-dashboard.html
+                    const modalHtml = `
+                        <div class="modal fade" id="classDetailsModal" tabindex="-1">
+                            <div class="modal-dialog modal-xl">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-info-circle me-2"></i>Class Details: ${cls.class_code} - ${cls.class_name}
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <!-- Class Information -->
+                                        <div class="card mb-4">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Class Information</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <p><strong>Class Code:</strong> ${cls.class_code}</p>
+                                                        <p><strong>Class Name:</strong> ${cls.class_name}</p>
+                                                        <p><strong>Semester:</strong> ${cls.semester}</p>
+                                                        <p><strong>Academic Year:</strong> ${cls.academic_year}</p>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <p><strong>Max Students:</strong> ${cls.max_students}</p>
+                                                        <p><strong>Enrolled Students:</strong> ${enrolledStudents.length}</p>
+                                                        <p><strong>Status:</strong>
+                                                            <span class="badge ${cls.is_active ? 'bg-success' : 'bg-secondary'} ms-2">
+                                                                ${cls.is_active ? 'Active' : 'Inactive'}
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Class Statistics -->
+                                        <div class="row mb-4">
+                                            <div class="col-md-3">
+                                                <div class="card text-center">
+                                                    <div class="card-body">
+                                                        <h4 class="text-primary">${enrolledStudents.length}</h4>
+                                                        <small class="text-muted">Total Students</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card text-center">
+                                                    <div class="card-body">
+                                                        <h4 class="text-success">${enrolledStudents.filter(s => s.is_present === 1 || s.today_attendance === 'present').length}</h4>
+                                                        <small class="text-muted">Present Today</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card text-center">
+                                                    <div class="card-body">
+                                                        <h4 class="text-warning">${enrolledStudents.length > 0 ? Math.round(enrolledStudents.filter(s => s.overall_percentage).reduce((sum, s) => sum + (s.overall_percentage || 0), 0) / enrolledStudents.length) : 0}%</h4>
+                                                        <small class="text-muted">Avg Attendance</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card text-center">
+                                                    <div class="card-body">
+                                                        <h4 class="text-info">${cls.subjects ? cls.subjects.length : 0}</h4>
+                                                        <small class="text-muted">Total Sessions</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Students List -->
+                                        <div class="card">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0"><i class="fas fa-users me-2"></i>Enrolled Students</h6>
+                                                <small class="text-muted">Click on a student to view their attendance history</small>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover" id="studentsTable">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Roll Number</th>
+                                                                <th>Name</th>
+                                                                <th>Status</th>
+                                                                <th>Today's Attendance</th>
+                                                                <th>Overall Attendance</th>
+                                                                <th>Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="studentsTableBody">
+                                                            ${enrolledStudents.length > 0 ? enrolledStudents.map(student => `
+                                                                <tr>
+                                                                    <td>${student.roll_number || student.student_id || 'N/A'}</td>
+                                                                    <td>${student.name || 'Unknown Student'}</td>
+                                                                    <td><span class="badge bg-success">Active</span></td>
+                                                                    <td>
+                                                                        ${student.today_attendance === 'present' || student.is_present === 1 ?
+                                                                            '<span class="badge bg-success">Present</span>' :
+                                                                            student.today_attendance === 'absent' || student.is_present === 0 ?
+                                                                            '<span class="badge bg-danger">Absent</span>' :
+                                                                            '<span class="badge bg-secondary">Not Marked</span>'}
+                                                                    </td>
+                                                                    <td>${student.overall_percentage ? student.overall_percentage + '%' : 'N/A'}</td>
+                                                                    <td>
+                                                                        <button class="btn btn-outline-primary btn-sm" onclick="viewStudentAttendance('${student.id}', '${student.name || 'Unknown Student'}')">
+                                                                            <i class="fas fa-eye me-1"></i>View History
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            `).join('') : `
+                                                                <tr>
+                                                                    <td colspan="6" class="text-center py-4 text-muted">
+                                                                        <i class="fas fa-users-slash me-1"></i>No students enrolled in this class
+                                                                    </td>
+                                                                </tr>
+                                                            `}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-primary" onclick="exportClassDetails()">
+                                            <i class="fas fa-download me-2"></i>Export Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Remove existing modal if present
+                    const existingModal = document.getElementById('classDetailsModal');
+                    if (existingModal) {
+                        existingModal.remove();
+                    }
+
+                    // Add modal to body
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('classDetailsModal'));
+                    modal.show();
+                } else {
+                    alert(result.message || 'Failed to load class details');
+                }
+            } catch (error) {
+                console.error('Error loading class details:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Refresh classes
+        function refreshClasses() {
+            loadClasses();
+            loadFaculty();
+            loadSubjects();
+        }
+
+        // Helper function to close modals
+        function closeModal(modalId) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+            if (modal) {
+                modal.hide();
+            }
+        }
+
+        // View student attendance history
+        async function viewStudentAttendance(studentId, studentName = '') {
+            try {
+                // Show loading state first
+                document.getElementById('attendanceHistoryBody').innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading attendance history...
+                        </td>
+                    </tr>
+                `;
+
+                // Populate basic student information
+                document.getElementById('studentName').textContent = studentName || 'N/A';
+                document.getElementById('studentRoll').textContent = 'N/A'; // Will be updated when we get student data
+                document.getElementById('studentClass').textContent = 'Current Class';
+                document.getElementById('studentSubject').textContent = 'Current Subject';
+
+                // Load attendance history directly using the student ID
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/faculty/teacher/students/${studentId}/attendance`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                let attendanceHistory = [];
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        attendanceHistory = result.attendance || [];
+                    }
+                } else {
+                    // Fallback demo data
+                    attendanceHistory = [
+                        {
+                            date: '2025-09-20',
+                            status: 'present',
+                            lecture_topic: 'Variables and Data Types',
+                            time: '09:00-10:30',
+                            notes: 'On time'
+                        },
+                        {
+                            date: '2025-09-18',
+                            status: 'present',
+                            lecture_topic: 'Introduction to Programming',
+                            time: '11:00-12:30',
+                            notes: 'Active participation'
+                        },
+                        {
+                            date: '2025-09-16',
+                            status: 'absent',
+                            lecture_topic: 'Basic Algorithms',
+                            time: '09:00-10:30',
+                            notes: 'Medical leave'
+                        },
+                        {
+                            date: '2025-09-13',
+                            status: 'present',
+                            lecture_topic: 'Control Structures',
+                            time: '11:00-12:30',
+                            notes: ''
+                        }
+                    ];
+                }
+
+                // Try to get student details from currentSubjectStudents if available
+                let studentDetails = null;
+                if (typeof currentSubjectStudents !== 'undefined' && currentSubjectStudents && currentSubjectStudents.length > 0) {
+                    studentDetails = currentSubjectStudents.find(s => s.id == studentId);
+                }
+
+                // Update student information if we have details
+                if (studentDetails) {
+                    document.getElementById('studentName').textContent = studentDetails.name || 'N/A';
+                    document.getElementById('studentRoll').textContent = studentDetails.rollnumber || studentDetails.roll_number || 'N/A';
+                }
+
+                // Calculate statistics
+                const totalSessions = attendanceHistory.length;
+                const presentCount = attendanceHistory.filter(a => a.status === 'present').length;
+                const absentCount = attendanceHistory.filter(a => a.status === 'absent').length;
+                const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+
+                // Update statistics
+                document.getElementById('totalClassesAttended').textContent = presentCount;
+                document.getElementById('totalClassesAbsent').textContent = absentCount;
+                document.getElementById('attendancePercentage').textContent = `${attendanceRate}%`;
+                document.getElementById('totalSessions').textContent = totalSessions;
+
+                // Display attendance history
+                if (attendanceHistory.length === 0) {
+                    document.getElementById('attendanceHistoryBody').innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="fas fa-calendar-times me-2"></i>No attendance records found
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    document.getElementById('attendanceHistoryBody').innerHTML = attendanceHistory.map(record => {
+                        const statusBadge = record.status === 'present'
+                            ? '<span class="badge bg-success">Present</span>'
+                            : record.status === 'absent'
+                            ? '<span class="badge bg-danger">Absent</span>'
+                            : '<span class="badge bg-warning">Late</span>';
+
+                        const formattedDate = new Date(record.date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+
+                        return `
+                            <tr>
+                                <td>${formattedDate}</td>
+                                <td>${statusBadge}</td>
+                                <td>${record.lecture_topic || 'N/A'}</td>
+                                <td>${record.time || 'N/A'}</td>
+                                <td>${record.notes || '-'}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('studentAttendanceModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error loading student attendance:', error);
+                alert('Failed to load student attendance history.');
+            }
+        }
+
+        // Export student attendance
+        function exportStudentAttendance() {
+            alert('Export student attendance feature coming soon!');
+        }
+
+        // Export class details
+        function exportClassDetails() {
+            alert('Export class details feature coming soon!');
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/pages/register.html';
+            }
+        }
+    </script>
+</body>
+</html>

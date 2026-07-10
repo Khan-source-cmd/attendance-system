@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Corporate Dashboard - Universal Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 250px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            padding-top: 1rem;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            text-decoration: none;
+            border-bottom: 1px solid #ecf0f1;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar .nav-link {
+            color: #2c3e50;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+            transform: translateX(5px);
+        }
+
+        .sidebar .nav-link.active {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.15);
+            border-right: 4px solid #3498db;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        /* Welcome Card */
+        .welcome-card {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.3);
+        }
+
+        /* Corporate Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-left: 3px solid #3498db;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: rgba(52, 152, 219, 0.05);
+            border-radius: 50%;
+            transform: translate(30px, -30px);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .stat-number {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.2rem;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Corporate Action Cards */
+        .action-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        /* Work Session Management */
+        .work-session {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        /* Punch Buttons */
+        .punch-btn {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: none;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            transition: all 0.3s ease;
+            margin: 1rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .punch-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .punch-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .punch-in {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        .punch-out {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .punch-break-start {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .punch-break-end {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+
+        /* Current Status */
+        .current-status {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .status-indicator {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 1rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .status-in {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            animation: pulse 2s infinite;
+        }
+
+        .status-out {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Corporate Specific Components */
+        .corporate-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border-left: 4px solid #3498db;
+        }
+
+        .project-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .meeting-schedule {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .meeting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .meeting-item:last-child {
+            border-bottom: none;
+        }
+
+        .productivity-alert {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Recent Activity */
+        .recent-activity {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            color: white;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-time {
+            color: #7f8c8d;
+            font-size: 0.8rem;
+        }
+
+        /* Modals */
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            border: none;
+        }
+
+        .btn-close-white {
+            filter: brightness(0) invert(1);
+        }
+
+        /* Forms */
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #ecf0f1;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .punch-btn {
+                width: 100px;
+                height: 100px;
+                font-size: 1rem;
+            }
+
+            .welcome-card {
+                padding: 1.5rem;
+            }
+
+            .welcome-card h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle d-md-none position-fixed" onclick="toggleSidebar()" aria-label="Toggle navigation" style="top: 15px; left: 15px; z-index: 1041; background: rgba(255, 255, 255, 0.9); border: 2px solid #3498db; color: #3498db; width: 45px; height: 45px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay d-md-none" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <a href="/pages/corporate-user-dashboard.html" class="sidebar-brand">
+            <i class="fas fa-briefcase me-2"></i>
+            Corporate Attendance
+        </a>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="/pages/corporate-user-dashboard.html">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/history.html">
+                    <i class="fas fa-history me-2"></i>Work History
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showProjects()">
+                    <i class="fas fa-project-diagram me-2"></i>My Projects
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showMeetings()">
+                    <i class="fas fa-calendar-check me-2"></i>Meetings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/profile.html">
+                    <i class="fas fa-user me-2"></i>Profile
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/settings.html">
+                    <i class="fas fa-cog me-2"></i>Settings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="logout()">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Welcome Card -->
+        <div class="welcome-card">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">Welcome back, <span id="userName">Loading...</span>!</h1>
+                    <p class="mb-0 opacity-75">
+                        <i class="fas fa-briefcase me-2"></i><span id="userRole">Corporate Professional</span>
+                        <i class="fas fa-building ms-2 me-2"></i><span id="userIndustry">Corporate</span>
+                    </p>
+                    <p class="mb-0 opacity-75 mt-2">
+                        <i class="fas fa-clock me-2"></i>Today is <span id="currentDate"></span>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div id="currentTime" class="h2 mb-0"></div>
+                    <div class="small opacity-75" id="digitalId">ID: Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Corporate Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-check text-success"></i>
+                </div>
+                <div class="stat-number" id="workSessions">-</div>
+                <div class="stat-label">Work Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock text-info"></i>
+                </div>
+                <div class="stat-number" id="hoursWorked">-</div>
+                <div class="stat-label">Hours This Month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line text-warning"></i>
+                </div>
+                <div class="stat-number" id="productivityScore">-</div>
+                <div class="stat-label">Productivity Score</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-fire text-danger"></i>
+                </div>
+                <div class="stat-number" id="currentStreak">-</div>
+                <div class="stat-label">Attendance Streak</div>
+            </div>
+        </div>
+
+        <!-- Work Session Management -->
+        <div class="row" id="workSection">
+            <div class="col-lg-4 mb-4">
+                <div class="current-status">
+                    <h5 class="mb-3">Current Work Status</h5>
+                    <div id="statusIndicator" class="status-indicator status-out">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h6 id="statusText">Ready for work</h6>
+                    <p id="statusTime" class="text-muted mb-0">-</p>
+                </div>
+            </div>
+            <div class="col-lg-8 mb-4">
+                <div class="action-card work-session">
+                    <h5 class="mb-4">Work Session Clock</h5>
+                    <div class="row justify-content-center">
+                        <div class="col-6 col-md-3">
+                            <button class="punch-btn punch-in" onclick="promptPunchMethod('in')" title="Start Work">
+                                <i class="fas fa-sign-in-alt mb-2"></i><br>
+                                <small>Start Work</small>
+                            </button>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button class="punch-btn punch-out" onclick="promptPunchMethod('out')" title="End Work">
+                                <i class="fas fa-sign-out-alt mb-2"></i><br>
+                                <small>End Work</small>
+                            </button>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button class="punch-btn punch-break-start" onclick="quickPunch('break_start')" title="Start Break">
+                                <i class="fas fa-coffee mb-2"></i><br>
+                                <small>Break</small>
+                            </button>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button class="punch-btn punch-break-end" onclick="quickPunch('break_end')" title="End Break">
+                                <i class="fas fa-play mb-2"></i><br>
+                                <small>Resume</small>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#qrScanModal">
+                            <i class="fas fa-qrcode me-2"></i>Scan QR Code
+                        </button>
+                        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#manualPunchModal">
+                            <i class="fas fa-edit me-2"></i>Manual Entry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Meeting Schedule -->
+        <div class="meeting-schedule">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-calendar-day me-2 text-info"></i>Today's Meeting Schedule</h4>
+                <button class="btn btn-outline-info" onclick="refreshMeetings()">
+                    <i class="fas fa-sync me-1"></i>Refresh
+                </button>
+            </div>
+            <div id="todayMeetings">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                    <p class="mt-2">Loading today's meetings...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productivity & Performance -->
+        <div class="corporate-card">
+            <h4><i class="fas fa-chart-line me-2 text-warning"></i>Productivity & Performance</h4>
+            <div id="productivityAlerts">
+                <div class="productivity-alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Productivity Tip:</strong> Maintain consistent work hours for better performance tracking.
+                </div>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Performance Status:</strong> Meeting productivity goals this month.
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Projects -->
+        <div class="corporate-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-project-diagram me-2 text-primary"></i>Current Projects</h4>
+                <button class="btn btn-outline-primary btn-sm" onclick="showProjects()">
+                    <i class="fas fa-eye me-1"></i>View All
+                </button>
+            </div>
+            <div id="currentProjects">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                    <p class="mt-2">Loading current projects...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Recent Work Activity</h5>
+                <a href="/pages/history.html" class="btn btn-sm btn-outline-info">View All</a>
+            </div>
+            <div id="recentActivityList">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Loading recent activity...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Punch Method Selection Modal -->
+    <div class="modal fade" id="punchMethodModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-hand-pointer me-2"></i>Select Clock Method
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-4">Choose how you'd like to record your work session</p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg" onclick="doPunch('manual')">
+                            <i class="fas fa-hand-paper me-2"></i>Manual Clock
+                        </button>
+                        <button class="btn btn-info btn-lg" onclick="doPunch('gps')">
+                            <i class="fas fa-map-marker-alt me-2"></i>GPS Location Clock
+                        </button>
+                        <button class="btn btn-secondary btn-lg" onclick="doPunch('qr')">
+                            <i class="fas fa-qrcode me-2"></i>QR Code Scan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Scan Modal -->
+    <div class="modal fade" id="qrScanModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-qrcode me-2"></i>Scan Work QR Code
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopQRScanner()"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="qr-scanner mb-3">
+                        <video id="qrVideo" class="w-100 rounded" style="max-height: 400px; object-fit: cover;"></video>
+                        <canvas id="qrCanvas" style="display: none;"></canvas>
+                        <div id="qrPlaceholder" class="bg-light p-4 rounded">
+                            <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Click "Start Scanner" to activate camera</p>
+                            <small class="text-muted">Point your camera at the work QR code</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-success w-100 mb-2" id="startScannerBtn" onclick="startQRScanner()">
+                                <i class="fas fa-play me-2"></i>Start Scanner
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-danger w-100 mb-2" id="stopScannerBtn" onclick="stopQRScanner()" disabled>
+                                <i class="fas fa-stop me-2"></i>Stop Scanner
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="qrCodeInput" class="form-label">Or enter QR code manually</label>
+                        <input type="text" id="qrCodeInput" class="form-control" placeholder="Enter work QR code data" autocomplete="off">
+                        <small class="text-muted">Enter the QR code data you received from your supervisor</small>
+                    </div>
+                    <div id="qrScanStatus" class="alert d-none mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="stopQRScanner()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="processQRCode()">
+                        <i class="fas fa-check me-2"></i>Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Punch Modal -->
+    <div class="modal fade" id="manualPunchModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Manual Work Entry
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="manualPunchForm">
+                        <div class="mb-3">
+                            <label for="punchType" class="form-label">Work Action</label>
+                            <select id="punchType" class="form-select" required>
+                                <option value="">Select work action</option>
+                                <option value="in">Start Work Session</option>
+                                <option value="out">End Work Session</option>
+                                <option value="breakstart">Start Break</option>
+                                <option value="breakend">End Break</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="punchNotes" class="form-label">Notes (Optional)</label>
+                            <textarea id="punchNotes" class="form-control" rows="3" placeholder="Add any notes about this work session"></textarea>
+                        </div>
+                        <div class="location-info">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-map-marker-alt me-2 text-info"></i>
+                                <div>
+                                    <div class="fw-bold">Current Location</div>
+                                    <small id="currentLocation" class="text-muted">Detecting location...</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="manualPunchStatus" class="alert d-none mt-3"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitManualPunch()">
+                        <i class="fas fa-check me-2"></i>Submit Work Entry
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Modal -->
+    <div class="modal" id="processingModal" tabindex="-1" style="display: none;" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <div class="spinner-border text-info mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h6 id="processingText">Processing work session...</h6>
+                    <p id="processingSubtext" class="text-muted small mb-0">Please wait</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        // API base configuration
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:4000' : `http://${window.location.hostname}:4000`;
+
+        // Authentication functions
+        function getAuthToken() {
+            return localStorage.getItem('token') || sessionStorage.getItem('token') ||
+                   localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+        }
+
+        function getUserData() {
+            return {
+                token: getAuthToken(),
+                digitalid: localStorage.getItem('digitalid') || sessionStorage.getItem('digitalid'),
+                role: localStorage.getItem('role') || sessionStorage.getItem('role'),
+                name: localStorage.getItem('name') || sessionStorage.getItem('name'),
+                industrytype: localStorage.getItem('industrytype') || sessionStorage.getItem('industrytype')
+            };
+        }
+
+        // Redirect to login if not authenticated
+        const userData = getUserData();
+        if (!userData.token || !userData.digitalid) {
+            console.log('No authentication found, redirecting to register');
+            window.location.href = '/pages/register.html';
+        }
+
+        let userProfile = {};
+        let currentLocationData = {};
+        let currentPunchType = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Corporate dashboard initializing with user data:', userData);
+
+            // Store the current dashboard URL for navigation
+            if (window.dashboardNav && window.dashboardNav.storeCurrentDashboardUrl) {
+                window.dashboardNav.storeCurrentDashboardUrl();
+                console.log('Corporate dashboard URL stored for navigation');
+            }
+
+            loadUserProfile();
+            loadDashboardData();
+            updateCurrentTime();
+            getCurrentLocation();
+
+            // Update time every second
+            setInterval(updateCurrentTime, 1000);
+
+            // Set current date
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        });
+
+        // Load user profile
+        async function loadUserProfile() {
+            try {
+                const token = getAuthToken();
+                if (!token) throw new Error('No authentication token found');
+
+                const response = await fetch(`${API_BASE}/api/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    userProfile = result.user;
+                    console.log('Corporate profile loaded:', userProfile);
+
+                    // Update UI elements
+                    const userNameEl = document.getElementById('userName');
+                    if (userNameEl) {
+                        userNameEl.textContent = userProfile.name || '';
+                    }
+
+                    const userRoleEl = document.getElementById('userRole');
+                    if (userRoleEl) {
+                        userRoleEl.textContent = userProfile.role || 'Corporate Professional';
+                    }
+
+                    const userIndustryEl = document.getElementById('userIndustry');
+                    if (userIndustryEl) {
+                        userIndustryEl.textContent = 'Corporate';
+                    }
+
+                    const digitalIdEl = document.getElementById('digitalId');
+                    if (digitalIdEl) {
+                        digitalIdEl.textContent = `ID: ${userProfile.digital_id || ''}`;
+                    }
+                } else {
+                    throw new Error(result.message || 'Failed to load profile');
+                }
+            } catch (error) {
+                console.error('Profile load error:', error);
+                if (error.message.includes('403') || error.message.includes('401')) {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    alert('Your session has expired. Please login again.');
+                    window.location.href = '/pages/register.html';
+                } else {
+                    showNotification('Failed to load profile. Please refresh the page.', 'error');
+                }
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const token = getAuthToken();
+                if (!token) throw new Error('No authentication token');
+
+                const response = await fetch(`${API_BASE}/api/attendance/history?limit=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    updateCorporateStats(result.history);
+                    updateRecentActivity(result.history.slice(0, 5));
+                    updateCurrentStatus(result.history);
+                    loadCorporateProjects();
+                    loadCorporateMeetings();
+                } else {
+                    throw new Error(result.message || 'Failed to load dashboard data');
+                }
+            } catch (error) {
+                console.error('Dashboard data load error:', error);
+                if (error.message.includes('403') || error.message.includes('401')) {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    alert('Your session has expired. Please login again.');
+                    window.location.href = '/pages/register.html';
+                } else {
+                    showNotification('Failed to load dashboard data.', 'error');
+                }
+            }
+        }
+
+        // Update corporate-specific stats
+        function updateCorporateStats(history) {
+            const totalRecords = history.length;
+
+            // Calculate corporate-specific metrics
+            const thisMonth = history.filter(h => {
+                const date = new Date(h.timestamp);
+                const now = new Date();
+                return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+            }).length;
+
+            // Calculate hours worked (assuming 8-hour workdays)
+            const hoursWorked = Math.round((thisMonth * 8) / 10) * 10; // Round to nearest 10
+
+            // Productivity score (simulated)
+            const productivityScore = Math.min(100, Math.max(75, 75 + Math.floor(Math.random() * 21)));
+
+            // Calculate current streak
+            const dailyAttendance = {};
+            history.forEach(record => {
+                const date = record.timestamp.split('T')[0];
+                if (!dailyAttendance[date]) dailyAttendance[date] = [];
+                dailyAttendance[date].push(record);
+            });
+
+            const sortedDates = Object.keys(dailyAttendance).sort().reverse();
+            let streak = 0;
+            const today = new Date().toISOString().split('T')[0];
+
+            for (let i = 0; i < sortedDates.length; i++) {
+                const date = sortedDates[i];
+                const daysDiff = Math.floor((new Date(today) - new Date(date)) / (1000 * 60 * 60 * 24));
+
+                if (daysDiff === streak && dailyAttendance[date].some(r => r.punchtype === 'in')) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+
+            // Update UI
+            document.getElementById('workSessions').textContent = totalRecords;
+            document.getElementById('hoursWorked').textContent = hoursWorked + 'h';
+            document.getElementById('productivityScore').textContent = productivityScore + '%';
+            document.getElementById('currentStreak').textContent = streak;
+        }
+
+        // Update current status
+        function updateCurrentStatus(history) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const statusTime = document.getElementById('statusTime');
+
+            if (history.length === 0) {
+                statusIndicator.className = 'status-indicator status-out';
+                statusIndicator.innerHTML = '<i class="fas fa-clock"></i>';
+                statusText.textContent = 'Ready for work';
+                statusTime.textContent = 'No records yet';
+                updatePunchButtonStates('ready');
+                return;
+            }
+
+            const lastRecord = history[0];
+            const lastTime = new Date(lastRecord.timestamp);
+            const punchType = lastRecord.punchtype || lastRecord.punch_type || 'unknown';
+
+            if (punchType === 'in') {
+                statusIndicator.className = 'status-indicator status-in';
+                statusIndicator.innerHTML = '<i class="fas fa-briefcase"></i>';
+                statusText.textContent = 'At work';
+                statusTime.textContent = `Since ${lastTime.toLocaleTimeString()}`;
+                updatePunchButtonStates('at_work');
+            } else if (punchType === 'break_start') {
+                statusIndicator.className = 'status-indicator status-in';
+                statusIndicator.innerHTML = '<i class="fas fa-coffee"></i>';
+                statusText.textContent = 'On break';
+                statusTime.textContent = `Since ${lastTime.toLocaleTimeString()}`;
+                updatePunchButtonStates('on_break');
+            } else if (punchType === 'break_end') {
+                statusIndicator.className = 'status-indicator status-in';
+                statusIndicator.innerHTML = '<i class="fas fa-briefcase"></i>';
+                statusText.textContent = 'At work';
+                statusTime.textContent = `Since ${lastTime.toLocaleTimeString()}`;
+                updatePunchButtonStates('at_work');
+            } else if (punchType === 'out') {
+                statusIndicator.className = 'status-indicator status-out';
+                statusIndicator.innerHTML = '<i class="fas fa-home"></i>';
+                statusText.textContent = 'Off work';
+                statusTime.textContent = `Since ${lastTime.toLocaleTimeString()}`;
+                updatePunchButtonStates('off_work');
+            } else {
+                statusIndicator.className = 'status-indicator status-out';
+                statusIndicator.innerHTML = '<i class="fas fa-clock"></i>';
+                statusText.textContent = 'Ready for work';
+                statusTime.textContent = 'No records yet';
+                updatePunchButtonStates('ready');
+            }
+        }
+
+        // Update punch button states
+        function updatePunchButtonStates(currentStatus) {
+            const punchInBtn = document.querySelector('.punch-in');
+            const punchOutBtn = document.querySelector('.punch-out');
+            const breakStartBtn = document.querySelector('.punch-break-start');
+            const breakEndBtn = document.querySelector('.punch-break-end');
+
+            // Reset all buttons
+            [punchInBtn, punchOutBtn, breakStartBtn, breakEndBtn].forEach(btn => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            });
+
+            // Disable buttons based on current status
+            switch(currentStatus) {
+                case 'ready':
+                    if (punchOutBtn) punchOutBtn.disabled = true;
+                    if (breakStartBtn) breakStartBtn.disabled = true;
+                    if (breakEndBtn) breakEndBtn.disabled = true;
+                    break;
+
+                case 'at_work':
+                    if (punchInBtn) punchInBtn.disabled = true;
+                    if (breakEndBtn) breakEndBtn.disabled = true;
+                    break;
+
+                case 'on_break':
+                    if (punchInBtn) punchInBtn.disabled = true;
+                    if (punchOutBtn) punchOutBtn.disabled = true;
+                    if (breakStartBtn) breakStartBtn.disabled = true;
+                    break;
+
+                case 'off_work':
+                    if (punchOutBtn) punchOutBtn.disabled = true;
+                    if (breakStartBtn) breakStartBtn.disabled = true;
+                    if (breakEndBtn) breakEndBtn.disabled = true;
+                    break;
+            }
+
+            // Update disabled button styles
+            [punchInBtn, punchOutBtn, breakStartBtn, breakEndBtn].forEach(btn => {
+                if (btn && btn.disabled) {
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                }
+            });
+        }
+
+        // Load corporate projects
+        function loadCorporateProjects() {
+            const container = document.getElementById('currentProjects');
+
+            // Mock project data for demonstration
+            const mockProjects = [
+                {
+                    name: 'Q4 Marketing Campaign',
+                    status: 'In Progress',
+                    progress: 75,
+                    deadline: 'Dec 31, 2024',
+                    team: 'Marketing Team'
+                },
+                {
+                    name: 'Product Launch Strategy',
+                    status: 'Planning',
+                    progress: 30,
+                    deadline: 'Jan 15, 2025',
+                    team: 'Product Team'
+                }
+            ];
+
+            const projectsHtml = mockProjects.map(project => `
+                <div class="project-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-1">${project.name}</h6>
+                        <span class="badge bg-${project.status === 'In Progress' ? 'primary' : 'secondary'}">${project.status}</span>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Progress: ${project.progress}%</small>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-${project.status === 'In Progress' ? 'primary' : 'secondary'}" style="width: ${project.progress}%"></div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted"><i class="fas fa-calendar me-1"></i>${project.deadline}</small>
+                        <small class="text-muted"><i class="fas fa-users me-1"></i>${project.team}</small>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = projectsHtml;
+        }
+
+        // Load corporate meetings
+        function loadCorporateMeetings() {
+            const container = document.getElementById('todayMeetings');
+
+            // Mock meeting data for demonstration
+            const mockMeetings = [
+                {
+                    title: 'Team Standup',
+                    time: '09:00 - 09:30',
+                    location: 'Conference Room A',
+                    attendees: 8
+                },
+                {
+                    title: 'Client Presentation',
+                    time: '14:00 - 15:30',
+                    location: 'Main Boardroom',
+                    attendees: 12
+                }
+            ];
+
+            const meetingsHtml = mockMeetings.map(meeting => `
+                <div class="meeting-item">
+                    <div>
+                        <h6 class="mb-1">${meeting.title}</h6>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>${meeting.time} •
+                            <i class="fas fa-map-marker-alt ms-2 me-1"></i>${meeting.location}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">${meeting.attendees} attendees</small>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = meetingsHtml;
+        }
+
+        // Update recent activity
+        function updateRecentActivity(recentHistory) {
+            const container = document.getElementById('recentActivityList');
+
+            if (recentHistory.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-calendar-times fa-2x mb-3"></i>
+                        <p>No recent activity</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create activity items HTML - map attendance data to activity format
+            const activityHtml = recentHistory.map(activity => {
+                // Map attendance data to activity format
+                const activityType = getAttendanceActivityType(activity.punch_type, activity.attendance_method);
+                const icon = getActivityIcon(activityType);
+                const timeAgo = activity.timestamp_formatted || (activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'Unknown time');
+
+                // Create meaningful title based on attendance data
+                const userName = activity.name || 'Unknown User';
+                const punchType = activity.punch_type ? activity.punch_type.toUpperCase() : 'ATTENDANCE';
+                const method = activity.attendance_method ? activity.attendance_method.toUpperCase() : '';
+                const title = `${userName} - ${punchType} ${method ? `(${method})` : ''}`;
+
+                // Create details
+                const details = [];
+                if (activity.role) details.push(activity.role);
+                if (activity.location_data && activity.location_data.address) {
+                    details.push(activity.location_data.address);
+                }
+
+                return `
+                    <div class="activity-item">
+                        <div class="activity-icon" style="background: ${icon.color};">
+                            <i class="fas fa-${icon.icon}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">
+                                ${title}
+                            </div>
+                            <div class="activity-meta">
+                                <span class="activity-time">${timeAgo}</span>
+                                ${details.length > 0 ? `<span>• ${details.join(' • ')}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = activityHtml;
+        }
+
+        // Helper function to get activity type from attendance data
+        function getAttendanceActivityType(punchType, method) {
+            if (!punchType) return 'attendance';
+
+            switch (punchType.toLowerCase()) {
+                case 'in':
+                    return 'check_in';
+                case 'out':
+                    return 'check_out';
+                case 'break_start':
+                    return 'break_start';
+                case 'break_end':
+                    return 'break_end';
+                default:
+                    return method === 'qr' ? 'qr_scan' : 'attendance';
+            }
+        }
+
+        // Get activity icon based on type
+        function getActivityIcon(type) {
+            const icons = {
+                'check_in': { icon: 'sign-in-alt', color: 'var(--success-gradient)' },
+                'check_out': { icon: 'sign-out-alt', color: 'var(--danger-gradient)' },
+                'break_start': { icon: 'coffee', color: 'var(--warning-gradient)' },
+                'break_end': { icon: 'play', color: 'var(--info-gradient)' },
+                'qr_scan': { icon: 'qrcode', color: 'var(--secondary-gradient)' },
+                'attendance': { icon: 'clock', color: 'var(--primary-gradient)' }
+            };
+            return icons[type] || { icon: 'circle', color: 'var(--secondary-gradient)' };
+        }
+
+        // Punch method selection
+        function promptPunchMethod(type) {
+            currentPunchType = type;
+            const modal = new bootstrap.Modal(document.getElementById('punchMethodModal'));
+            modal.show();
+        }
+
+        // Execute punch with selected method
+        async function doPunch(method) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('punchMethodModal'));
+            if (modal) modal.hide();
+
+            if (method === 'manual') {
+                await submitAttendance(currentPunchType, 'manual');
+            } else if (method === 'gps') {
+                await submitAttendance(currentPunchType, 'gps');
+            } else if (method === 'qr') {
+                // Open QR scanner modal
+                const qrModal = new bootstrap.Modal(document.getElementById('qrScanModal'));
+                qrModal.show();
+            }
+        }
+
+        // Quick punch (for break start/end)
+        async function quickPunch(type) {
+            await submitAttendance(type, 'manual');
+        }
+
+        // Submit attendance record
+        async function submitAttendance(punchType, method) {
+            try {
+                // Show processing modal
+                showProcessingModal('Recording attendance...', 'Please wait');
+
+                const token = getAuthToken();
+                if (!token) throw new Error('No authentication token');
+
+                const attendanceData = {
+                    punch_type: punchType,
+                    requested_timestamp: new Date().toISOString(),
+                    attendance_method: method,
+                    location_data: currentLocationData,
+                    notes: method === 'manual' ? 'Corporate dashboard entry' : ''
+                };
+
+                const response = await fetch(`${API_BASE}/api/attendance/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(attendanceData)
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification(`Work session ${punchType} recorded successfully!`, 'success');
+                    // Refresh dashboard data
+                    await loadDashboardData();
+                } else {
+                    throw new Error(result.message || 'Failed to record attendance');
+                }
+            } catch (error) {
+                console.error('Attendance submission error:', error);
+                showNotification('Failed to record attendance. Please try again.', 'error');
+            } finally {
+                hideProcessingModal();
+            }
+        }
+
+        // Submit manual punch
+        async function submitManualPunch() {
+            const punchType = document.getElementById('punchType').value;
+            const notes = document.getElementById('punchNotes').value;
+
+            if (!punchType) {
+                showNotification('Please select a work action', 'warning');
+                return;
+            }
+
+            try {
+                showProcessingModal('Submitting manual entry...', 'Please wait');
+
+                const token = getAuthToken();
+                if (!token) throw new Error('No authentication token');
+
+                const attendanceData = {
+                    punch_type: punchType,
+                    attendance_method: 'manual',
+                    location_data: currentLocationData,
+                    notes: notes
+                };
+
+                const response = await fetch(`${API_BASE}/api/attendance/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(attendanceData)
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Manual entry submitted successfully!', 'success');
+                    // Close modal and refresh data
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('manualPunchModal'));
+                    if (modal) modal.hide();
+                    await loadDashboardData();
+                    // Clear form
+                    document.getElementById('manualPunchForm').reset();
+                } else {
+                    throw new Error(result.message || 'Failed to submit manual entry');
+                }
+            } catch (error) {
+                console.error('Manual punch submission error:', error);
+                showNotification('Failed to submit manual entry. Please try again.', 'error');
+            } finally {
+                hideProcessingModal();
+            }
+        }
+
+        // QR Scanner functions
+        let qrScanner = null;
+
+        async function startQRScanner() {
+            try {
+                const video = document.getElementById('qrVideo');
+                const canvas = document.getElementById('qrCanvas');
+                const placeholder = document.getElementById('qrPlaceholder');
+
+                // Hide placeholder and show video
+                placeholder.style.display = 'none';
+                video.style.display = 'block';
+
+                // Start camera
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+
+                video.srcObject = stream;
+                video.play();
+
+                // Initialize QR scanner
+                qrScanner = new Html5Qrcode('qrVideo');
+
+                qrScanner.start(
+                    { facingMode: 'environment' },
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    onQRCodeScanned,
+                    onQRCodeScanError
+                );
+
+                // Update button states
+                document.getElementById('startScannerBtn').disabled = true;
+                document.getElementById('stopScannerBtn').disabled = false;
+
+                showNotification('QR scanner started', 'success');
+            } catch (error) {
+                console.error('QR scanner start error:', error);
+                showNotification('Failed to start QR scanner. Please check camera permissions.', 'error');
+            }
+        }
+
+        function stopQRScanner() {
+            if (qrScanner) {
+                qrScanner.stop().then(() => {
+                    console.log('QR scanner stopped');
+                }).catch(error => {
+                    console.error('Error stopping QR scanner:', error);
+                });
+                qrScanner = null;
+            }
+
+            // Stop video stream
+            const video = document.getElementById('qrVideo');
+            if (video.srcObject) {
+                const stream = video.srcObject;
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+            }
+
+            // Show placeholder and hide video
+            document.getElementById('qrPlaceholder').style.display = 'block';
+            video.style.display = 'none';
+
+            // Update button states
+            document.getElementById('startScannerBtn').disabled = false;
+            document.getElementById('stopScannerBtn').disabled = true;
+        }
+
+        function onQRCodeScanned(decodedText, decodedResult) {
+            console.log('QR code scanned:', decodedText);
+            document.getElementById('qrCodeInput').value = decodedText;
+            stopQRScanner();
+            showNotification('QR code scanned successfully!', 'success');
+        }
+
+        function onQRCodeScanError(error) {
+            // Ignore scan errors, they're normal
+            console.log('QR scan error (normal):', error);
+        }
+
+        function processQRCode() {
+            const qrCode = document.getElementById('qrCodeInput').value.trim();
+            if (!qrCode) {
+                showNotification('Please enter or scan a QR code', 'warning');
+                return;
+            }
+
+            // Close QR modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('qrScanModal'));
+            if (modal) modal.hide();
+
+            // Submit attendance with QR code
+            submitAttendance(currentPunchType, 'qr', qrCode);
+        }
+
+        // Get current location
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                console.log('Geolocation not supported');
+                document.getElementById('currentLocation').textContent = 'Location not supported';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    currentLocationData = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        timestamp: new Date().toISOString()
+                    };
+                    document.getElementById('currentLocation').textContent = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+                },
+                error => {
+                    console.error('Location error:', error);
+                    document.getElementById('currentLocation').textContent = 'Location unavailable';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // 5 minutes
+                }
+            );
+        }
+
+        // Update current time
+        function updateCurrentTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+        }
+
+        // Show processing modal
+        function showProcessingModal(title, subtitle) {
+            document.getElementById('processingText').textContent = title;
+            document.getElementById('processingSubtext').textContent = subtitle;
+            document.getElementById('processingModal').style.display = 'block';
+            document.getElementById('processingModal').classList.add('show');
+        }
+
+        // Hide processing modal
+        function hideProcessingModal() {
+            document.getElementById('processingModal').style.display = 'none';
+            document.getElementById('processingModal').classList.remove('show');
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Corporate-specific functions
+        function showProjects() {
+            showNotification('Project management feature coming soon!', 'info');
+        }
+
+        function showMeetings() {
+            showNotification('Meeting management feature coming soon!', 'info');
+        }
+
+        function refreshMeetings() {
+            loadCorporateMeetings();
+            showNotification('Meetings refreshed!', 'success');
+        }
+
+        // Mobile sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('show');
+                overlay.classList.toggle('show');
+
+                // Prevent body scroll when sidebar is open
+                if (sidebar.classList.contains('show')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            if (sidebar && overlay) {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Close sidebar when clicking on nav links (mobile)
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 992) {
+                        closeSidebar();
+                    }
+                });
+            });
+        });
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/pages/register.html';
+            }
+        }
+    </script>
+</body>
+</html>

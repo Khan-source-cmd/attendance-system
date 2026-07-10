@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization & Connections - Universal Attendance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-container {
+            padding: 2rem 0;
+        }
+
+        .org-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .org-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .member-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+
+        .member-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+
+        .member-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        .role-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-admin { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        .role-manager { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
+        .role-teacher { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; }
+        .role-employee { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .role-student { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; }
+
+        .status-online {
+            color: #27ae60;
+            font-size: 0.8rem;
+        }
+
+        .status-offline {
+            color: #95a5a6;
+            font-size: 0.8rem;
+        }
+
+        .org-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .org-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .connection-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .connection-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .connection-btn.connected {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .connection-btn.pending {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .department-section {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #f0f0f0;
+        }
+
+        .department-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .department-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 1rem;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 25px;
+            padding: 0.5rem 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            border: none;
+            outline: none;
+            width: 100%;
+            padding: 0.5rem;
+        }
+
+        .industry-badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .hierarchy-tree {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .hierarchy-node {
+            display: inline-block;
+            text-align: center;
+            margin: 0 1rem 2rem;
+        }
+
+        .hierarchy-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 0 auto 0.5rem;
+            border: 3px solid white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .hierarchy-line {
+            height: 2px;
+            background: #dee2e6;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem 0;
+            }
+
+            .org-card, .member-card {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .member-avatar {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+
+            .org-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#" data-nav="dashboard">
+                <i class="fas fa-users me-2"></i>Organization & Connections
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-nav="dashboard">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pages/history.html">
+                            <i class="fas fa-history me-1"></i>History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pages/profile.html">
+                            <i class="fas fa-user me-1"></i>Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/pages/integrations.html">
+                            <i class="fas fa-users me-1"></i>Connections
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pages/settings.html">
+                            <i class="fas fa-cog me-1"></i>Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container main-container">
+        <!-- Organization Header -->
+        <div class="org-header">
+            <i class="fas fa-building fa-3x mb-3"></i>
+            <h1 id="orgName">Loading Organization...</h1>
+            <p class="mb-3" id="orgDescription">Connecting you with your team and colleagues</p>
+            <div class="industry-badge" id="orgIndustry">Loading...</div>
+
+            <div class="org-stats">
+                <div class="stat-box">
+                    <span class="stat-number" id="totalMembers">-</span>
+                    <span class="stat-label">Team Members</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number" id="activeToday">-</span>
+                    <span class="stat-label">Active Today</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number" id="departments">-</span>
+                    <span class="stat-label">Departments</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number" id="attendanceRate">-%</span>
+                    <span class="stat-label">Team Attendance</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="search-box">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" class="search-input" id="memberSearch" placeholder="Search team members by name, role, or department...">
+                <button class="btn btn-outline-secondary border-0" type="button" onclick="clearSearch()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Organization Hierarchy (Admin/Manager View) -->
+        <div class="hierarchy-tree" id="hierarchySection" style="display: none;">
+            <h4 class="mb-4"><i class="fas fa-sitemap me-2"></i>Organization Hierarchy</h4>
+            <div id="hierarchyContent">
+                <!-- Hierarchy will be populated here -->
+            </div>
+        </div>
+
+        <!-- Team Members -->
+        <div class="org-card">
+            <h4 class="mb-4"><i class="fas fa-users me-2"></i>Your Team</h4>
+            <div id="teamMembers">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <h5>Loading team members...</h5>
+                </div>
+            </div>
+        </div>
+
+        <!-- Departments (if applicable) -->
+        <div id="departmentsSection">
+            <!-- Departments will be populated here -->
+        </div>
+
+        <!-- Connection Requests (if any) -->
+        <div class="org-card" id="connectionRequests" style="display: none;">
+            <h4 class="mb-4"><i class="fas fa-user-plus me-2"></i>Connection Requests</h4>
+            <div id="requestsList">
+                <!-- Connection requests will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/navigation-fix.js"></script>
+    <script>
+        // More flexible API base that handles both localhost and 127.0.0.1
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:4000' : `http://${window.location.hostname}:4000`;
+
+        // Get auth tokens
+        const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+        const digitalId = localStorage.getItem('digitalid') || localStorage.getItem('digital_id');
+        const userRole = localStorage.getItem('role');
+        const userIndustry = localStorage.getItem('industrytype');
+
+        let currentUser = null;
+        let organizationData = null;
+        let teamMembers = [];
+        let filteredMembers = [];
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!token || !digitalId) {
+                window.location.href = '/pages/register.html';
+                return;
+            }
+
+            loadUserProfile();
+            setupSearch();
+        });
+
+        // Load user profile and organization data
+        async function loadUserProfile() {
+            try {
+                console.log('🔄 Loading user profile from:', `${API_BASE}/api/profile`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+                const response = await fetch(`${API_BASE}/api/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ Profile API response:', result);
+
+                if (result.success) {
+                    currentUser = result.user;
+                    console.log('✅ User profile loaded:', currentUser);
+                    loadOrganizationData();
+                } else {
+                    throw new Error(result.message || 'Failed to load user profile');
+                }
+            } catch (error) {
+                console.error('❌ Error loading profile:', error);
+
+                // Check if it's a network/connectivity issue
+                if (error.name === 'AbortError') {
+                    console.log('⏰ Profile request timed out');
+                    showNotification('Connection timeout - please check your internet connection', 'warning');
+                } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    console.log('🌐 Network error detected');
+                    showNotification('Network error - please check your connection and try again', 'warning');
+                } else if (error.message.includes('401') || error.message.includes('403')) {
+                    console.log('🔐 Authentication error');
+                    showNotification('Session expired - please login again', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/pages/register.html';
+                    }, 2000);
+                    return;
+                } else {
+                    showNotification('Error loading profile - using offline mode', 'warning');
+                }
+
+                // Try to load from localStorage as fallback
+                loadProfileFromLocalStorage();
+            }
+        }
+
+        // Fallback: Load profile data from localStorage
+        function loadProfileFromLocalStorage() {
+            try {
+                console.log('🔄 Loading profile from localStorage fallback');
+
+                // Try to reconstruct user data from localStorage
+                const storedName = localStorage.getItem('name') || localStorage.getItem('user_name');
+                const storedRole = localStorage.getItem('role');
+                const storedIndustry = localStorage.getItem('industrytype') || localStorage.getItem('industry_type');
+                const storedEmail = localStorage.getItem('email') || localStorage.getItem('user_email');
+
+                if (storedName && storedRole) {
+                    currentUser = {
+                        name: storedName,
+                        role: storedRole,
+                        industry_type: storedIndustry,
+                        email: storedEmail,
+                        digital_id: digitalId
+                    };
+
+                    console.log('✅ Profile loaded from localStorage:', currentUser);
+                    showNotification('Using cached profile data', 'info');
+
+                    // Continue with organization data loading
+                    loadOrganizationData();
+                } else {
+                    console.log('❌ No profile data in localStorage');
+                    showNotification('Unable to load profile - please check your connection', 'error');
+                    // Show basic interface anyway
+                    showOfflineMode();
+                }
+            } catch (error) {
+                console.error('❌ Error loading profile from localStorage:', error);
+                showOfflineMode();
+            }
+        }
+
+        // Show offline mode when API is unavailable
+        function showOfflineMode() {
+            console.log('🔄 Showing offline mode');
+
+            // Update the header with basic info
+            document.getElementById('orgName').textContent = 'Offline Mode';
+            document.getElementById('orgDescription').textContent = 'Unable to connect to server. Some features may be limited.';
+            document.getElementById('orgIndustry').textContent = 'Offline';
+
+            // Show basic stats
+            document.getElementById('totalMembers').textContent = 'N/A';
+            document.getElementById('activeToday').textContent = 'N/A';
+            document.getElementById('departments').textContent = 'N/A';
+            document.getElementById('attendanceRate').textContent = 'N/A';
+
+            // Show offline message in team members section
+            document.getElementById('teamMembers').innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-wifi-slash fa-3x text-warning mb-3"></i>
+                    <h5>Offline Mode</h5>
+                    <p class="text-muted">Unable to connect to the server. Please check your internet connection and try again.</p>
+                    <button class="btn btn-primary" onclick="retryConnection()">
+                        <i class="fas fa-sync-alt me-2"></i>Retry Connection
+                    </button>
+                </div>
+            `;
+
+            showNotification('Working in offline mode - limited functionality available', 'warning');
+        }
+
+        // Retry connection
+        function retryConnection() {
+            console.log('🔄 Retrying connection...');
+            showNotification('Retrying connection...', 'info');
+            loadUserProfile();
+        }
+
+        // Load organization data from real backend API
+        async function loadOrganizationData() {
+            try {
+                // Use details endpoint for all authenticated users
+                const response = await fetch(`${API_BASE}/api/organization/details`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    organizationData = result.organization;
+                    displayOrganizationInfo();
+                    loadTeamMembers();
+                    loadOrganizationStats();
+
+                    // Show hierarchy for admins and managers
+                    if (isAdminOrManager()) {
+                        displayOrganizationHierarchy();
+                    }
+                } else {
+                    showNotification('Failed to load organization data', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading organization data:', error);
+                showNotification('Error loading organization data', 'error');
+            }
+        }
+
+        // Generate mock organization data based on industry
+        function generateMockOrganizationData() {
+            const industry = userIndustry || 'education';
+            const organizations = {
+                'education': {
+                    name: 'Green Valley International School',
+                    description: 'A premier educational institution committed to excellence in learning and character development',
+                    industry: 'Education',
+                    type: 'school',
+                    departments: ['Administration', 'Teaching Staff', 'Support Staff', 'Students'],
+                    totalMembers: 245,
+                    activeToday: 189,
+                    departmentsCount: 4,
+                    attendanceRate: 77
+                },
+                'corporate': {
+                    name: 'TechCorp Solutions Inc.',
+                    description: 'Leading technology solutions provider with innovative workforce management',
+                    industry: 'Corporate',
+                    type: 'company',
+                    departments: ['Engineering', 'Sales', 'HR', 'Finance', 'Operations'],
+                    totalMembers: 156,
+                    activeToday: 142,
+                    departmentsCount: 5,
+                    attendanceRate: 91
+                },
+                'healthcare': {
+                    name: 'City General Hospital',
+                    description: 'Comprehensive healthcare facility dedicated to patient care and medical excellence',
+                    industry: 'Healthcare',
+                    type: 'hospital',
+                    departments: ['Medical Staff', 'Nursing', 'Administration', 'Support Services'],
+                    totalMembers: 312,
+                    activeToday: 298,
+                    departmentsCount: 4,
+                    attendanceRate: 95
+                },
+                'retail': {
+                    name: 'Metro Shopping Mall',
+                    description: 'Premium shopping destination with diverse retail and entertainment options',
+                    industry: 'Retail',
+                    type: 'mall',
+                    departments: ['Store Management', 'Customer Service', 'Security', 'Maintenance'],
+                    totalMembers: 89,
+                    activeToday: 76,
+                    departmentsCount: 4,
+                    attendanceRate: 85
+                }
+            };
+
+            return organizations[industry] || organizations['education'];
+        }
+
+        // Display organization information
+        function displayOrganizationInfo() {
+            document.getElementById('orgName').textContent = organizationData.name;
+            document.getElementById('orgDescription').textContent = organizationData.description;
+            document.getElementById('orgIndustry').textContent = organizationData.industry;
+
+            // Update stats
+            document.getElementById('totalMembers').textContent = organizationData.totalMembers;
+            document.getElementById('activeToday').textContent = organizationData.activeToday;
+            document.getElementById('departments').textContent = organizationData.departmentsCount;
+            document.getElementById('attendanceRate').textContent = organizationData.attendanceRate + '%';
+        }
+
+        // Load team members from real backend API
+        async function loadTeamMembers() {
+            try {
+                console.log('Loading team members for user:', digitalId, 'Role:', userRole);
+
+                // Only admins can see all users, others see limited data
+                const endpoint = isAdminOrManager() ? '/api/admin/users' : '/api/profile';
+
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+
+                console.log('API Response:', result);
+
+                if (result.success) {
+                    if (isAdminOrManager()) {
+                        // Admin gets all users except students
+                        teamMembers = result.users.filter(user =>
+                            !user.role?.toLowerCase().includes('student')
+                        ).map(user => ({
+                            id: user.digital_id,
+                            name: user.name,
+                            role: user.role,
+                            department: getDepartmentForRole(user.role),
+                            status: user.is_active ? 'online' : 'offline',
+                            lastActive: user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never',
+                            avatar: null,
+                            isCurrentUser: user.digital_id === digitalId,
+                            email: user.email,
+                            industry_type: user.industry_type
+                        }));
+                        console.log('Admin view - All non-student users:', teamMembers.length);
+                    } else {
+                        // Regular users only see staff/faculty, not students
+                        teamMembers = [{
+                            id: result.user.digital_id,
+                            name: result.user.name,
+                            role: result.user.role,
+                            department: getDepartmentForRole(result.user.role),
+                            status: 'online',
+                            lastActive: 'Now',
+                            avatar: null,
+                            isCurrentUser: true,
+                            email: result.user.email,
+                            industry_type: result.user.industry_type
+                        }];
+
+                        // Add some staff/faculty members for non-students
+                        const staffRoles = ['teacher', 'professor', 'admin', 'administrator', 'manager', 'principal'];
+                        const staffUsers = result.users?.filter(user =>
+                            staffRoles.some(role => user.role?.toLowerCase().includes(role)) &&
+                            user.digital_id !== digitalId
+                        ).slice(0, 5) || [];
+
+                        console.log('Staff users found:', staffUsers.length);
+
+                        staffUsers.forEach(user => {
+                            teamMembers.push({
+                                id: user.digital_id,
+                                name: user.name,
+                                role: user.role,
+                                department: getDepartmentForRole(user.role),
+                                status: user.is_active ? 'online' : 'offline',
+                                lastActive: user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never',
+                                avatar: null,
+                                isCurrentUser: false,
+                                email: user.email,
+                                industry_type: user.industry_type
+                            });
+                        });
+                    }
+
+                    console.log('Final team members:', teamMembers);
+                    filteredMembers = [...teamMembers];
+
+                    // Display team members
+                    displayTeamMembers();
+                    displayDepartments();
+
+                    // Always try to display hierarchy for admins/managers
+                    if (isAdminOrManager()) {
+                        displayOrganizationHierarchy();
+                    }
+
+                    // If no team members loaded, show a message
+                    if (teamMembers.length === 0) {
+                        console.warn('No team members loaded, showing fallback');
+                        showFallbackTeamMembers();
+                    }
+                } else {
+                    console.error('Failed to load team members:', result);
+                    showNotification('Failed to load team members', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading team members:', error);
+                showNotification('Error loading team members', 'error');
+            }
+        }
+
+        // Generate mock team members
+        function generateMockTeamMembers() {
+            const members = [];
+            const roles = getRolesForIndustry();
+            const departments = organizationData.departments;
+
+            // Add current user first
+            members.push({
+                id: digitalId,
+                name: currentUser?.name || 'You',
+                role: userRole || 'employee',
+                department: getDepartmentForRole(userRole),
+                status: 'online',
+                lastActive: 'Now',
+                avatar: null,
+                isCurrentUser: true
+            });
+
+            // Generate other team members based on user's access level
+            const memberCount = isAdminOrManager() ? 15 : 8;
+
+            for (let i = 0; i < memberCount; i++) {
+                const role = roles[Math.floor(Math.random() * roles.length)];
+                const department = departments[Math.floor(Math.random() * departments.length)];
+                const firstName = ['John', 'Sarah', 'Michael', 'Emma', 'David', 'Lisa', 'Robert', 'Anna'][Math.floor(Math.random() * 8)];
+                const lastName = ['Smith', 'Johnson', 'Brown', 'Williams', 'Jones', 'Garcia', 'Miller', 'Davis'][Math.floor(Math.random() * 8)];
+
+                members.push({
+                    id: `EMP-${String(1000 + i).padStart(3, '0')}`,
+                    name: `${firstName} ${lastName}`,
+                    role: role,
+                    department: department,
+                    status: Math.random() > 0.3 ? 'online' : 'offline',
+                    lastActive: Math.random() > 0.5 ? 'Now' : `${Math.floor(Math.random() * 60)}m ago`,
+                    avatar: null,
+                    isCurrentUser: false
+                });
+            }
+
+            return members;
+        }
+
+        // Get appropriate roles for the industry
+        function getRolesForIndustry() {
+            const industryRoles = {
+                'education': ['teacher', 'principal', 'vice-principal', 'counselor', 'librarian', 'admin-staff', 'student'],
+                'corporate': ['manager', 'developer', 'analyst', 'sales-rep', 'hr-specialist', 'accountant'],
+                'healthcare': ['doctor', 'nurse', 'administrator', 'technician', 'pharmacist', 'receptionist'],
+                'retail': ['store-manager', 'sales-associate', 'cashier', 'stock-clerk', 'security-guard']
+            };
+
+            return industryRoles[userIndustry] || industryRoles['education'];
+        }
+
+        // Get department for a role
+        function getDepartmentForRole(role) {
+            const roleDepartments = {
+                'admin': 'Administration',
+                'administrator': 'Administration',
+                'manager': 'Management',
+                'teacher': 'Teaching Staff',
+                'professor': 'Teaching Staff',
+                'student': 'Students',
+                'developer': 'Engineering',
+                'sales-rep': 'Sales',
+                'doctor': 'Medical Staff',
+                'nurse': 'Nursing'
+            };
+
+            return roleDepartments[role] || (organizationData?.departments?.[0] || 'General');
+        }
+
+        // Check if user is admin or manager
+        function isAdminOrManager() {
+            const adminRoles = ['admin', 'administrator', 'system administrator', 'manager', 'principal', 'vice-principal'];
+            return adminRoles.some(role => userRole?.toLowerCase().includes(role.toLowerCase()));
+        }
+
+        // Display team members
+        function displayTeamMembers() {
+            const container = document.getElementById('teamMembers');
+
+            if (filteredMembers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5>No team members found</h5>
+                        <p class="text-muted">Try adjusting your search criteria</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredMembers.map(member => `
+                <div class="member-card">
+                    <div class="d-flex align-items-center">
+                        <div class="member-avatar">
+                            ${member.avatar ? `<img src="${member.avatar}" alt="${member.name}">` :
+                              member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">${member.name} ${member.isCurrentUser ? '<small class="text-primary">(You)</small>' : ''}</h6>
+                                    <p class="mb-1 text-muted small">${member.department}</p>
+                                    <span class="role-badge role-${member.role.toLowerCase().replace(' ', '-')}">
+                                        ${member.role.replace('-', ' ').toUpperCase()}
+                                    </span>
+                                </div>
+                                <div class="text-end">
+                                    <div class="mb-2">
+                                        <i class="fas fa-circle ${member.status === 'online' ? 'status-online' : 'status-offline'}"></i>
+                                        <small class="ms-1">${member.status === 'online' ? 'Online' : 'Offline'}</small>
+                                    </div>
+                                    ${!member.isCurrentUser ? `
+                                        <button class="connection-btn" onclick="sendConnectionRequest('${member.id}')">
+                                            <i class="fas fa-user-plus me-1"></i>Connect
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display organization hierarchy (admin/manager view)
+        function displayOrganizationHierarchy() {
+            const hierarchySection = document.getElementById('hierarchySection');
+            const hierarchyContent = document.getElementById('hierarchyContent');
+
+            hierarchySection.style.display = 'block';
+
+            // Create hierarchy based on all team members
+            const hierarchy = {
+                admin: teamMembers.filter(m => ['admin', 'administrator', 'principal'].includes(m.role?.toLowerCase())),
+                managers: teamMembers.filter(m => ['manager', 'vice-principal'].includes(m.role?.toLowerCase())),
+                staff: teamMembers.filter(m =>
+                    ['teacher', 'professor', 'doctor', 'nurse', 'developer', 'analyst'].includes(m.role?.toLowerCase())
+                ),
+                others: teamMembers.filter(m =>
+                    !['admin', 'administrator', 'principal', 'manager', 'vice-principal', 'teacher', 'professor', 'doctor', 'nurse', 'developer', 'analyst'].includes(m.role?.toLowerCase())
+                )
+            };
+
+            let hierarchyHTML = '';
+
+            // Top level - Administrators
+            if (hierarchy.admin.length > 0) {
+                hierarchyHTML += `
+                    <div class="text-center mb-4">
+                        <h6 class="mb-3">Organization Leadership</h6>
+                        <div class="d-flex justify-content-center flex-wrap">
+                            ${hierarchy.admin.map(admin => `
+                                <div class="hierarchy-node">
+                                    <div class="hierarchy-avatar" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                                        ${admin.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                    </div>
+                                    <div class="mt-2">
+                                        <strong>${admin.name}</strong>
+                                        <br><small class="text-muted">${admin.role}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Second level - Managers
+            if (hierarchy.managers.length > 0) {
+                hierarchyHTML += `
+                    <div class="hierarchy-line"></div>
+                    <div class="text-center mb-4">
+                        <h6 class="mb-3">Management</h6>
+                        <div class="d-flex justify-content-center flex-wrap">
+                            ${hierarchy.managers.slice(0, 4).map(manager => `
+                                <div class="hierarchy-node">
+                                    <div class="hierarchy-avatar" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                                        ${manager.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                    </div>
+                                    <div class="mt-2">
+                                        <strong>${manager.name}</strong>
+                                        <br><small class="text-muted">${manager.role}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Third level - Staff
+            if (hierarchy.staff.length > 0) {
+                hierarchyHTML += `
+                    <div class="hierarchy-line"></div>
+                    <div class="text-center mb-4">
+                        <h6 class="mb-3">Staff & Faculty</h6>
+                        <div class="d-flex justify-content-center flex-wrap">
+                            ${hierarchy.staff.slice(0, 6).map(staff => `
+                                <div class="hierarchy-node" style="margin: 0 0.5rem 1rem;">
+                                    <div class="hierarchy-avatar" style="width: 60px; height: 60px; font-size: 1.2rem; background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                                        ${staff.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                    </div>
+                                    <div class="mt-1">
+                                        <strong style="font-size: 0.8rem;">${staff.name}</strong>
+                                        <br><small class="text-muted" style="font-size: 0.7rem;">${staff.role}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Fourth level - Others (if any)
+            if (hierarchy.others.length > 0) {
+                hierarchyHTML += `
+                    <div class="hierarchy-line"></div>
+                    <div class="text-center mb-4">
+                        <h6 class="mb-3">Team Members</h6>
+                        <div class="d-flex justify-content-center flex-wrap">
+                            ${hierarchy.others.slice(0, 8).map(member => `
+                                <div class="hierarchy-node" style="margin: 0 0.3rem 1rem;">
+                                    <div class="hierarchy-avatar" style="width: 50px; height: 50px; font-size: 1rem; background: linear-gradient(135deg, #3498db, #2980b9);">
+                                        ${member.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                    </div>
+                                    <div class="mt-1">
+                                        <strong style="font-size: 0.7rem;">${member.name}</strong>
+                                        <br><small class="text-muted" style="font-size: 0.6rem;">${member.role}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // If no hierarchy members found, show current user
+            if (!hierarchy.admin.length && !hierarchy.managers.length && !hierarchy.staff.length && !hierarchy.others.length && teamMembers.length > 0) {
+                const currentUser = teamMembers.find(m => m.isCurrentUser) || teamMembers[0];
+                hierarchyHTML = `
+                    <div class="text-center mb-4">
+                        <h6 class="mb-3">Organization Structure</h6>
+                        <div class="d-flex justify-content-center">
+                            <div class="hierarchy-node">
+                                <div class="hierarchy-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                                    ${currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                </div>
+                                <div class="mt-2">
+                                    <strong>${currentUser.name}</strong>
+                                    <br><small class="text-muted">${currentUser.role}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <small class="text-muted">Organization hierarchy will be displayed when more team members are available</small>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Show summary if there are more members
+            const totalMembers = hierarchy.admin.length + hierarchy.managers.length + hierarchy.staff.length + hierarchy.others.length;
+            const shownMembers = Math.min(4, hierarchy.admin.length) + Math.min(4, hierarchy.managers.length) + Math.min(6, hierarchy.staff.length) + Math.min(8, hierarchy.others.length);
+            const hiddenMembers = totalMembers - shownMembers;
+
+            if (hiddenMembers > 0) {
+                hierarchyHTML += `
+                    <div class="text-center mt-3">
+                        <small class="text-muted">... and ${hiddenMembers} more team members</small>
+                    </div>
+                `;
+            }
+
+            hierarchyContent.innerHTML = hierarchyHTML;
+        }
+
+        // Display departments
+        function displayDepartments() {
+            const container = document.getElementById('departmentsSection');
+
+            if (!organizationData?.departments || organizationData.departments.length === 0) return;
+
+            const departmentMembers = {};
+            filteredMembers.forEach(member => {
+                if (!departmentMembers[member.department]) {
+                    departmentMembers[member.department] = [];
+                }
+                departmentMembers[member.department].push(member);
+            });
+
+            container.innerHTML = organizationData.departments.map(dept => {
+                const members = departmentMembers[dept] || [];
+                return `
+                    <div class="department-section">
+                        <div class="department-header">
+                            <div class="department-icon">
+                                <i class="fas fa-${getDepartmentIcon(dept)}"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">${dept}</h5>
+                                <small class="text-muted">${members.length} member${members.length !== 1 ? 's' : ''}</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            ${members.slice(0, 4).map(member => `
+                                <div class="col-md-3 mb-2">
+                                    <div class="text-center">
+                                        <div class="member-avatar" style="width: 40px; height: 40px; font-size: 0.9rem; margin: 0 auto;">
+                                            ${member.name.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                        <small class="d-block mt-1">${member.name.split(' ')[0]}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${members.length > 4 ? `
+                                <div class="col-md-3 mb-2">
+                                    <div class="text-center">
+                                        <div class="member-avatar" style="width: 40px; height: 40px; background: #6c757d; margin: 0 auto;">
+                                            +${members.length - 4}
+                                        </div>
+                                        <small class="d-block mt-1 text-muted">More</small>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get icon for department
+        function getDepartmentIcon(dept) {
+            const icons = {
+                'Administration': 'user-tie',
+                'Teaching Staff': 'chalkboard-teacher',
+                'Support Staff': 'hands-helping',
+                'Students': 'user-graduate',
+                'Engineering': 'code',
+                'Sales': 'chart-line',
+                'HR': 'users-cog',
+                'Finance': 'calculator',
+                'Medical Staff': 'user-md',
+                'Nursing': 'heartbeat'
+            };
+            return icons[dept] || 'users';
+        }
+
+        // Setup search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('memberSearch');
+
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+
+                if (query === '') {
+                    filteredMembers = [...teamMembers];
+                } else {
+                    filteredMembers = teamMembers.filter(member =>
+                        member.name.toLowerCase().includes(query) ||
+                        member.role.toLowerCase().includes(query) ||
+                        member.department.toLowerCase().includes(query)
+                    );
+                }
+
+                displayTeamMembers();
+                displayDepartments();
+            });
+        }
+
+        // Clear search
+        function clearSearch() {
+            document.getElementById('memberSearch').value = '';
+            filteredMembers = [...teamMembers];
+            displayTeamMembers();
+            displayDepartments();
+        }
+
+        // Send connection request
+        function sendConnectionRequest(memberId) {
+            const member = teamMembers.find(m => m.id === memberId);
+            if (member) {
+                showNotification(`Connection request sent to ${member.name}`, 'success');
+
+                // Update button state
+                const buttons = document.querySelectorAll('.connection-btn');
+                buttons.forEach(btn => {
+                    if (btn.onclick.toString().includes(memberId)) {
+                        btn.innerHTML = '<i class="fas fa-clock me-1"></i>Pending';
+                        btn.classList.add('pending');
+                        btn.disabled = true;
+                    }
+                });
+            }
+        }
+
+        // Load organization stats from real backend API
+        async function loadOrganizationStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/organization/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    const stats = result.stats;
+
+                    // Update the stats display with real data
+                    document.getElementById('totalMembers').textContent = stats.totalUsers || organizationData.user_count || 0;
+                    document.getElementById('activeToday').textContent = stats.recentLogins || 0;
+                    document.getElementById('departments').textContent = organizationData.departmentsCount || 0;
+                    document.getElementById('attendanceRate').textContent = '85%'; // Default attendance rate
+
+                    console.log('✅ Organization stats loaded successfully');
+                } else {
+                    console.log('⚠️ Could not load organization stats, using fallback data');
+                    // Fallback to basic stats
+                    document.getElementById('totalMembers').textContent = organizationData.user_count || 0;
+                    document.getElementById('activeToday').textContent = 0;
+                    document.getElementById('departments').textContent = organizationData.departmentsCount || 0;
+                    document.getElementById('attendanceRate').textContent = '85%';
+                }
+            } catch (error) {
+                console.error('Error loading organization stats:', error);
+                // Fallback to basic stats
+                document.getElementById('totalMembers').textContent = organizationData.user_count || 0;
+                document.getElementById('activeToday').textContent = 0;
+                document.getElementById('departments').textContent = organizationData.departmentsCount || 0;
+                document.getElementById('attendanceRate').textContent = '85%';
+            }
+        }
+
+        // Show fallback team members if API doesn't return data
+        function showFallbackTeamMembers() {
+            console.log('Showing fallback team members');
+
+            // Generate some sample team members based on user role
+            const sampleMembers = [];
+
+            // Add current user
+            sampleMembers.push({
+                id: digitalId,
+                name: currentUser?.name || 'You',
+                role: userRole || 'employee',
+                department: getDepartmentForRole(userRole),
+                status: 'online',
+                lastActive: 'Now',
+                avatar: null,
+                isCurrentUser: true
+            });
+
+            // Add some sample team members
+            const sampleData = [
+                { name: 'John Smith', role: 'teacher', department: 'Teaching Staff' },
+                { name: 'Sarah Johnson', role: 'admin', department: 'Administration' },
+                { name: 'Mike Wilson', role: 'manager', department: 'Management' },
+                { name: 'Emma Davis', role: 'teacher', department: 'Teaching Staff' },
+                { name: 'Robert Brown', role: 'teacher', department: 'Teaching Staff' }
+            ];
+
+            sampleData.forEach((member, index) => {
+                sampleMembers.push({
+                    id: `SAMPLE-${index + 1}`,
+                    name: member.name,
+                    role: member.role,
+                    department: member.department,
+                    status: Math.random() > 0.3 ? 'online' : 'offline',
+                    lastActive: Math.random() > 0.5 ? 'Now' : `${Math.floor(Math.random() * 60)}m ago`,
+                    avatar: null,
+                    isCurrentUser: false
+                });
+            });
+
+            teamMembers = sampleMembers;
+            filteredMembers = [...teamMembers];
+
+            displayTeamMembers();
+            displayDepartments();
+
+            showNotification('Using sample data - please check your connection', 'warning');
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/pages/register.html';
+            }
+        }
+    </script>
+</body>
+</html>

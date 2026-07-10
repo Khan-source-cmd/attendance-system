@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register | Universal Attendance System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .register-container {
+      max-width: 800px;
+      margin: 30px auto;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+      padding: 40px 50px;
+    }
+    h2 {
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .industry-select .card {
+      cursor: pointer;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 25px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+    }
+    .industry-select .card:hover,
+    .industry-select .card.selected {
+      border-color: #7856ff;
+      box-shadow: 0 8px 20px rgba(120, 86, 255, 0.4);
+      color: #7856ff;
+      transform: translateY(-4px);
+    }
+    .industry-select .card i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      color: inherit;
+    }
+    .btn-primary {
+      background-color: #7856ff;
+      border: none;
+      padding: 12px 40px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      border-radius: 30px;
+      box-shadow: 0 6px 12px rgba(120, 86, 255, 0.4);
+      transition: background-color 0.3s ease;
+    }
+    .btn-primary:hover {
+      background-color: #5a3fcc;
+    }
+    .form-label {
+      font-weight: 500;
+      color: #555;
+    }
+    .input-group-text {
+      background-color: #7856ff;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+    }
+    .form-control, .form-select {
+      border-radius: 8px;
+      border: 1.5px solid #ccc;
+      padding: 12px 16px;
+      font-size: 15px;
+      transition: border-color 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #7856ff;
+      box-shadow: 0 0 8px rgba(120, 86, 255, 0.4);
+      outline: none;
+    }
+    .dynamic-fields {
+      margin-top: 30px;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+    }
+    .dynamic-fields h5 {
+      color: #7856ff;
+      font-weight: 600;
+      margin-bottom: 25px;
+    }
+    .footer-text {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 0.9rem;
+      color: #777;
+    }
+    .input-group .btn-outline-secondary {
+      border-left: 0;
+      border-radius: 0 8px 8px 0;
+      background: #f3f2f7;
+      transition: background-color 0.3s ease;
+    }
+    .input-group .btn-outline-secondary:hover {
+      background-color: #e0defa;
+    }
+    #continueBtn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .login-modal {
+      border-radius: 15px;
+      border: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .login-modal .modal-header {
+      background: linear-gradient(45deg, #7856ff, #5a3fcc);
+      color: white;
+      border: none;
+      border-radius: 15px 15px 0 0;
+    }
+    .login-modal .modal-body {
+      padding: 30px;
+    }
+    .login-form .form-control {
+      border-radius: 10px;
+      border: 2px solid #e0e0e0;
+      padding: 12px 16px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+    .login-form .form-control:focus {
+      border-color: #7856ff;
+      box-shadow: 0 0 10px rgba(120, 86, 255, 0.3);
+      outline: none;
+    }
+    .login-form .btn-login {
+      background: linear-gradient(45deg, #7856ff, #5a3fcc);
+      border: none;
+      padding: 12px 40px;
+      font-weight: 600;
+      border-radius: 25px;
+      color: white;
+      transition: all 0.3s ease;
+    }
+    .login-form .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(120, 86, 255, 0.4);
+    }
+    #loginStatus {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    /* Modal fixes */
+    .modal {
+      z-index: 1060 !important;
+    }
+    .modal-backdrop {
+      z-index: 1055 !important;
+    }
+    .modal.show .modal-dialog {
+      transform: translate(0, 0) !important;
+      opacity: 1 !important;
+    }
+    /* Create Organization Modal Scroll */
+    #createOrgModal .modal-body {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <h2>Join Universal Attendance System</h2>
+    <!-- Step 1: Industry Selection -->
+    <div id="step1" class="industry-select">
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card" data-industry="healthcare">
+            <i class="fas fa-heartbeat"></i>
+            <h5>Healthcare</h5>
+            <p>Hospitals, Clinics & Medical Centers</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card" data-industry="education">
+            <i class="fas fa-graduation-cap"></i>
+            <h5>Education</h5>
+            <p>Schools, Colleges & Universities</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card" data-industry="corporate">
+            <i class="fas fa-building"></i>
+            <h5>Corporate</h5>
+            <p>Offices & Businesses</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card" data-industry="manufacturing">
+            <i class="fas fa-industry"></i>
+            <h5>Manufacturing</h5>
+            <p>Factories & Production Units</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card" data-industry="government">
+            <i class="fas fa-landmark"></i>
+            <h5>Government</h5>
+            <p>Public Sector & Agencies</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card" data-industry="retail">
+            <i class="fas fa-store"></i>
+            <h5>Retail</h5>
+            <p>Stores & Customer Service</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-4">
+        <button id="continueBtn" class="btn btn-primary" disabled>
+          Continue as Employee
+        </button>
+        <div class="mt-3">
+          <button id="createOrgBtn" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-2"></i>Create New Organization
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 2: Organization Connection -->
+    <div id="step2" class="d-none">
+      <div class="mb-3">
+        <button id="backBtn" class="btn btn-link">&larr; Back</button>
+        <h3 class="mt-2" id="selectedIndustryTitle"></h3>
+      </div>
+
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Connect to Your Organization</strong><br>
+        Enter your organization code to join the right admin and department.
+      </div>
+
+      <!-- Organization Code Help -->
+      <div class="alert alert-light border">
+        <h6 class="mb-2"><i class="fas fa-info-circle me-2 text-info"></i>Organization Code</h6>
+        <div class="small">
+          <p class="mb-1">Your organization code connects you to the right admin and department.</p>
+          <p class="mb-0"><strong>Format:</strong> ORG-XXXXXX-XXXXX or industry-specific codes</p>
+        </div>
+        <small class="text-muted mt-1 d-block">Contact your organization administrator if you don't have a code</small>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label for="organization_code" class="form-label">Organization Code *</label>
+          <div class="input-group">
+            <input id="organization_code" name="organization_code" type="text" required class="form-control" placeholder="e.g., TECH-2025-A1B2C3" autocomplete="off" />
+            <button type="button" id="validateOrgCode" class="btn btn-outline-primary" title="Validate Code">
+              <i class="fas fa-search"></i> Find Organization
+            </button>
+          </div>
+          <div class="form-text">
+            <small class="text-muted">Get this code from your organization administrator</small>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">&nbsp;</label>
+          <div id="orgValidationStatus" class="d-none">
+            <div class="text-center p-3 border rounded">
+              <div id="orgValidationIcon" class="mb-2"></div>
+              <div id="orgValidationText"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="organizationDetails" class="d-none">
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-building me-2"></i>Organization Details</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <p><strong>Organization:</strong> <span id="orgName"></span></p>
+                <p><strong>Industry:</strong> <span id="orgIndustry"></span></p>
+              </div>
+              <div class="col-md-6">
+                <p><strong>Admin:</strong> <span id="orgAdmin"></span></p>
+                <p><strong>Status:</strong> <span class="badge bg-success">Verified</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-4">
+        <button id="continueToRegistration" class="btn btn-primary btn-lg d-none">
+          <i class="fas fa-arrow-right me-2"></i>Continue to Registration
+        </button>
+      </div>
+    </div>
+
+
+
+  <!-- Step 3: Registration Form -->
+  <div id="step3" class="d-none">
+    <div class="mb-3">
+      <button id="backToOrgBtn" class="btn btn-link">&larr; Back to Organization</button>
+      <h3 class="mt-2">Complete Your Registration</h3>
+      <p class="text-muted">Joining: <strong><span id="joiningOrgName"></span></strong></p>
+    </div>
+
+    <form id="registerForm" novalidate>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="name" class="form-label">Full Name *</label>
+          <input id="name" name="name" type="text" required class="form-control" autocomplete="name" />
+        </div>
+        <div class="col-md-6">
+          <label for="email" class="form-label">Email *</label>
+          <input id="email" name="email" type="email" required class="form-control" autocomplete="email" />
+        </div>
+        <div class="col-md-6">
+          <label for="phone" class="form-label">Phone *</label>
+          <input id="phone" name="phone" type="tel" required class="form-control" autocomplete="tel" />
+        </div>
+        <div class="col-md-6">
+          <label for="role" class="form-label">Your Role *</label>
+          <select id="role" name="role" required class="form-select" autocomplete="organization-title">
+            <option value="">Select your role</option>
+          </select>
+        </div>
+        <div class="col-md-6" id="departmentContainer">
+          <label for="department" class="form-label" id="departmentLabel">Department *</label>
+          <select id="department" name="department" required class="form-select">
+            <option value="">Select department</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="password" class="form-label">Password *</label>
+          <div class="input-group">
+            <input id="password" name="password" type="password" minlength="6" required class="form-control" autocomplete="new-password" />
+            <button type="button" id="togglePassword" class="btn btn-outline-secondary" aria-label="Toggle password visibility">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+        <div id="roleSpecificFields" class="dynamic-fields d-none"></div>
+
+        <div class="d-grid mt-4">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-plus me-2"></i>Create Account
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Feedback message -->
+    <div id="feedback" class="alert d-none mt-3" role="alert"></div>
+
+    <!-- Login link -->
+    <div class="text-center mt-4">
+      Already have an account? <a href="#" id="showLoginModal" class="fw-bold text-decoration-none">Login here</a>
+    </div>
+  </div>
+
+  <!-- OTP Modal -->
+  <div class="modal fade" id="otpModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4">
+        <h5 class="text-center mb-3">Email Verification</h5>
+        <p class="text-center mb-3">Enter the 6-digit code sent to your email</p>
+        <form id="otpForm" novalidate>
+          <input type="text" id="otpInput" maxlength="6" class="form-control text-center fs-4" autocomplete="one-time-code" autofocus required pattern="\\d{6}" />
+          <div id="otpFeedback" class="alert d-none mt-2" role="alert"></div>
+          <button type="submit" class="btn btn-primary btn-lg mt-3 w-100">Verify</button>
+        </form>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <button type="button" id="resendOtpBtn" class="btn btn-link p-0">
+            Didn't receive code? Resend
+          </button>
+          <button type="button" id="reopenModalBtn" class="btn btn-link p-0">
+            Reopen Verification
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content login-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-sign-in-alt me-2"></i>Login to Your Account
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="loginForm" class="login-form">
+            <div class="mb-3">
+              <label for="loginDigitalId" class="form-label">Digital ID</label>
+              <div class="input-group">
+                <span class="input-group-text" id="loginDigitalIdLabel"><i class="fas fa-id-badge"></i></span>
+                <input type="text" id="loginDigitalId" class="form-control" placeholder="e.g., HEA-DOC-0001" required autocomplete="username" aria-labelledby="loginDigitalIdLabel" />
+              </div>
+            </div>
+            <div class="mb-4">
+              <label for="loginPassword" class="form-label">Password</label>
+              <div class="input-group">
+                <span class="input-group-text" id="loginPasswordLabel"><i class="fas fa-lock"></i></span>
+                <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required autocomplete="current-password" aria-labelledby="loginPasswordLabel" />
+                <button type="button" id="toggleLoginPassword" class="btn btn-outline-secondary" aria-label="Toggle password visibility">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div id="loginStatus" class="d-none alert" role="alert"></div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-login btn-lg">
+                <i class="fas fa-sign-in-alt me-2"></i>Login
+              </button>
+            </div>
+          </form>
+          <div class="text-center mt-3">
+            <small class="text-muted">
+              Don't have an account?
+              <a href="#" class="text-decoration-none" data-bs-dismiss="modal">Register here</a>
+            </small>
+            <div class="mt-2">
+              <a href="#" class="text-decoration-none small" id="showForgotPasswordModal">Forgot Password?</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forgot Password Modal -->
+  <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content login-modal">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-key me-2"></i>Forgot Password
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-4">
+            <i class="fas fa-envelope fa-3x text-primary mb-3"></i>
+            <p class="text-muted">Enter your email address and we'll send you instructions to reset your password.</p>
+          </div>
+          <form id="forgotPasswordForm">
+            <div class="mb-3">
+              <label for="forgotEmail" class="form-label">Email Address</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                <input type="email" id="forgotEmail" class="form-control" placeholder="Enter your registered email" required autocomplete="email" />
+              </div>
+            </div>
+            <div id="forgotPasswordStatus" class="alert d-none mt-3" role="alert"></div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-paper-plane me-2"></i>Send Reset Instructions
+              </button>
+            </div>
+          </form>
+          <div class="text-center mt-3">
+            <small class="text-muted">
+              Remember your password?
+              <a href="#" class="text-decoration-none" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginModal">Back to Login</a>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Organization Modal -->
+  <div class="modal fade" id="createOrgModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header" style="background: linear-gradient(45deg, #7856ff, #5a3fcc); color: white;">
+          <h5 class="modal-title">
+            <i class="fas fa-plus-circle me-2"></i>Create New Organization
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-4">Setting up: <strong><span id="selectedIndustryTextModal"></span></strong> Industry</p>
+
+          <form id="createOrgForm" novalidate>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="modalOrgName" class="form-label">Organization Name *</label>
+                <input id="modalOrgName" name="organization_name" type="text" required class="form-control" placeholder="e.g., TechCorp Solutions" />
+              </div>
+              <div class="col-md-6">
+                <label for="modalOrgType" class="form-label">Organization Type</label>
+                <select id="modalOrgType" name="organization_type" class="form-select">
+                  <option value="">Select type (optional)</option>
+                  <option value="private">Private</option>
+                  <option value="public">Public</option>
+                  <option value="non-profit">Non-Profit</option>
+                  <option value="government">Government</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="modalOrgAddress" class="form-label">Address</label>
+                <input id="modalOrgAddress" name="organization_address" type="text" class="form-control" placeholder="Street address (optional)" />
+              </div>
+              <div class="col-md-6">
+                <label for="modalOrgContactEmail" class="form-label">Contact Email</label>
+                <input id="modalOrgContactEmail" name="organization_contact_email" type="email" class="form-control" placeholder="contact@organization.com (optional)" />
+              </div>
+              <div class="col-md-6">
+                <label for="modalOrgContactPhone" class="form-label">Contact Phone</label>
+                <input id="modalOrgContactPhone" name="organization_contact_phone" type="tel" class="form-control" placeholder="+1-555-0123 (optional)" />
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h5 class="mb-3">Administrator Account</h5>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="modalAdminName" class="form-label">Full Name *</label>
+                <input id="modalAdminName" name="name" type="text" required class="form-control" placeholder="Your full name" />
+              </div>
+              <div class="col-md-6">
+                <label for="modalAdminEmail" class="form-label">Email *</label>
+                <input id="modalAdminEmail" name="email" type="email" required class="form-control" placeholder="admin@organization.com" />
+              </div>
+              <div class="col-md-6">
+                <label for="modalAdminPhone" class="form-label">Phone *</label>
+                <input id="modalAdminPhone" name="phone" type="tel" required class="form-control" placeholder="+1-555-0123" />
+              </div>
+              <div class="col-md-6">
+                <label for="modalAdminPassword" class="form-label">Password *</label>
+                <div class="input-group">
+                  <input id="modalAdminPassword" name="password" type="password" minlength="6" required class="form-control" placeholder="Create a strong password" />
+                  <button type="button" id="modalToggleAdminPassword" class="btn btn-outline-secondary" aria-label="Toggle password visibility">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-rocket me-2"></i>Create Organization & Account
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Detect API base URL that works from any device
+      const hostname = window.location.hostname;
+      let API_BASE;
+
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // For local development, try to use the actual network IP
+        API_BASE = 'http://localhost:4000'; // Fallback to localhost
+      } else {
+        // For network access, use the current hostname
+        API_BASE = `http://${hostname}:4000`;
+      }
+
+    const industryRoles = {
+      healthcare: ['Doctor', 'Nurse', 'Technician', 'Administrator', 'Receptionist', 'Pharmacist'],
+      education: ['Teacher', 'Professor', 'Student', 'Administrator', 'Librarian', 'Counselor'],
+      corporate: ['Manager', 'Executive', 'Developer', 'Analyst', 'HR', 'Sales'],
+      manufacturing: ['Operator', 'Supervisor', 'Inspector', 'Maintenance', 'Safety Officer'],
+      government: ['Officer', 'Clerk', 'Coordinator', 'Inspector'],
+      retail: ['Sales Associate', 'Cashier', 'Manager', 'Stock Clerk']
+    };
+
+    const industryFields = {
+      healthcare: [
+        {label: 'Medical Department', name: 'medical_department', type: 'select', options: ['ER', 'ICU', 'Pediatrics', 'Radiology', 'Pharmacy']},
+        {label: 'License Number', name: 'license_number', type: 'text'}
+      ],
+      education: [
+        {label: 'Institution', name: 'institution', type: 'text'},
+        {label: 'Grade Level', name: 'grade_level', type: 'select', options: ['Elementary', 'Middle School', 'High School', 'University']}
+      ],
+      corporate: [
+        {label: 'Corporate Department', name: 'corporate_department', type: 'select', options: ['IT', 'HR', 'Finance', 'Marketing']},
+        {label: 'Employee ID', name: 'employee_id', type: 'text'}
+      ],
+      manufacturing: [
+        {label: 'Facility Name', name: 'facility_name', type: 'text'},
+        {label: 'Shift', name: 'shift', type: 'select', options: ['Morning', 'Afternoon', 'Night']}
+      ],
+      government: [
+        {label: 'Agency', name: 'agency', type: 'text'},
+        {label: 'Clearance Level', name: 'clearance', type: 'select', options: ['Public', 'Confidential', 'Secret']}
+      ],
+      retail: [
+        {label: 'Store Location', name: 'store_location', type: 'text'},
+        {label: 'Position', name: 'position', type: 'select', options: ['Full-time', 'Part-time', 'Temporary']}
+      ]
+    };
+
+    let selectedIndustry = null;
+    let registeredId = null;
+
+    document.querySelectorAll('.industry-select .card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.industry-select .card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedIndustry = card.dataset.industry;
+        const continueBtn = document.getElementById('continueBtn');
+        if (continueBtn) continueBtn.disabled = false;
+      });
+    });
+
+    // Create Organization button handler
+    document.getElementById('createOrgBtn').addEventListener('click', () => {
+      console.log('Create Organization button clicked');
+      console.log('Selected industry:', selectedIndustry);
+
+      if(!selectedIndustry) {
+        showFeedback('Please select an industry first.', 'warning');
+        return;
+      }
+
+      const modalElement = document.getElementById('createOrgModal');
+      console.log('Modal element found:', modalElement);
+
+      if (!modalElement) {
+        console.error('Modal element not found!');
+        showFeedback('Modal not found. Please refresh the page.', 'danger');
+        return;
+      }
+
+      // Check if modal has content
+      const modalBody = modalElement.querySelector('.modal-body');
+      console.log('Modal body found:', modalBody);
+      console.log('Modal body content:', modalBody ? modalBody.innerHTML.substring(0, 100) + '...' : 'No content');
+
+      document.getElementById('selectedIndustryTextModal').textContent = selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1);
+
+      // Check if Bootstrap is available
+      if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded!');
+        showFeedback('Page error: Bootstrap not loaded. Please refresh the page.', 'danger');
+        return;
+      }
+
+      const modal = new bootstrap.Modal(modalElement);
+      console.log('Modal instance created:', modal);
+
+      // Add event listener to check when modal is shown
+      modalElement.addEventListener('shown.bs.modal', function () {
+        console.log('Modal is now visible');
+        console.log('Modal element visibility:', window.getComputedStyle(modalElement).visibility);
+        console.log('Modal element display:', window.getComputedStyle(modalElement).display);
+        console.log('Modal element z-index:', window.getComputedStyle(modalElement).zIndex);
+      });
+
+      // Add event listener for when modal fails to show
+      modalElement.addEventListener('show.bs.modal', function () {
+        console.log('Modal show event triggered');
+      });
+
+      modalElement.addEventListener('hide.bs.modal', function () {
+        console.log('Modal hide event triggered');
+      });
+
+      try {
+        modal.show();
+        console.log('Modal show() called successfully');
+      } catch (error) {
+        console.error('Error showing modal:', error);
+        showFeedback('Error opening modal. Please try again.', 'danger');
+      }
+    });
+
+    document.getElementById('continueBtn').addEventListener('click', () => {
+      if(!selectedIndustry) return;
+      document.getElementById('step1').classList.add('d-none');
+      document.getElementById('step2').classList.remove('d-none');
+      document.getElementById('selectedIndustryTitle').textContent = selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1) + ' Industry';
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      document.getElementById('step1').classList.remove('d-none');
+      document.getElementById('step2').classList.add('d-none');
+      document.getElementById('continueBtn').disabled = true;
+      selectedIndustry = null;
+      document.querySelectorAll('.industry-select .card').forEach(c => c.classList.remove('selected'));
+    });
+
+    // Continue to registration after organization validation
+    document.getElementById('continueToRegistration').addEventListener('click', () => {
+      document.getElementById('step2').classList.add('d-none');
+      document.getElementById('step3').classList.remove('d-none');
+      populateRolesForIndustry(selectedIndustry);
+      populateDepartmentsForIndustry(selectedIndustry);
+      renderRoleSpecificFields(selectedIndustry);
+
+      // Add debugging to ensure departments are populated
+      console.log('Industry selected:', selectedIndustry);
+      console.log('Departments populated for industry:', industryDepartments[selectedIndustry]);
+      setTimeout(() => {
+        const deptSelect = document.getElementById('department');
+        console.log('Department options after population:', deptSelect ? deptSelect.innerHTML : 'Department select not found');
+      }, 100);
+    });
+
+    // Role-based department field handling
+    document.getElementById('role').addEventListener('change', function() {
+      const selectedRole = this.value;
+      const departmentContainer = document.getElementById('departmentContainer');
+      const departmentLabel = document.getElementById('departmentLabel');
+      const departmentSelect = document.getElementById('department');
+
+      if (selectedRole === 'Student') {
+        // For students, change to class/grade level
+        departmentLabel.textContent = 'Class/Grade Level *';
+        departmentSelect.innerHTML = '<option value="">Select class/grade level</option>';
+        departmentSelect.innerHTML += `
+          <option value="Grade 1">Grade 1</option>
+          <option value="Grade 2">Grade 2</option>
+          <option value="Grade 3">Grade 3</option>
+          <option value="Grade 4">Grade 4</option>
+          <option value="Grade 5">Grade 5</option>
+          <option value="Grade 6">Grade 6</option>
+          <option value="Grade 7">Grade 7</option>
+          <option value="Grade 8">Grade 8</option>
+          <option value="Grade 9">Grade 9</option>
+          <option value="Grade 10">Grade 10</option>
+          <option value="Grade 11">Grade 11</option>
+          <option value="Grade 12">Grade 12</option>
+          <option value="Freshman">Freshman (1st Year)</option>
+          <option value="Sophomore">Sophomore (2nd Year)</option>
+          <option value="Junior">Junior (3rd Year)</option>
+          <option value="Senior">Senior (4th Year)</option>
+        `;
+        departmentContainer.style.display = 'block';
+      } else {
+        // For non-students, show departments based on industry
+        departmentLabel.textContent = 'Department *';
+        populateDepartmentsForIndustry(selectedIndustry);
+        departmentContainer.style.display = 'block';
+
+        // Ensure departments are populated after a short delay
+        setTimeout(() => {
+          if (departmentSelect.options.length <= 1) {
+            console.warn('Department options not populated, retrying...');
+            populateDepartmentsForIndustry(selectedIndustry);
+          }
+        }, 50);
+      }
+    });
+
+    // Back to organization step
+    document.getElementById('backToOrgBtn').addEventListener('click', () => {
+      document.getElementById('step2').classList.remove('d-none');
+      document.getElementById('step3').classList.add('d-none');
+    });
+
+    // Organization code validation with fallback for demo/development
+    document.getElementById('validateOrgCode').addEventListener('click', async () => {
+      const orgCode = document.getElementById('organization_code').value.trim();
+      if (!orgCode) {
+        showFeedback('Please enter an organization code first.', 'warning');
+        return;
+      }
+      if (!selectedIndustry) {
+        showFeedback('Please select an industry first.', 'warning');
+        return;
+      }
+
+      const validationStatus = document.getElementById('orgValidationStatus');
+      const validationIcon = document.getElementById('orgValidationIcon');
+      const validationText = document.getElementById('orgValidationText');
+
+      // Add null checks to prevent undefined errors
+      if (!validationStatus || !validationIcon || !validationText) {
+        console.error('Validation elements not found');
+        showFeedback('Page error: validation elements missing. Please refresh the page.', 'danger');
+        return;
+      }
+
+      validationStatus.classList.remove('d-none');
+      validationIcon.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x text-primary"></i>';
+      validationText.innerHTML = '<strong>Validating...</strong><br><small class="text-muted">Checking organization code</small>';
+
+      // First, check against saved organization data
+      const savedOrg = getSavedOrganization();
+      if (savedOrg && savedOrg.codes) {
+        const matchingCode = savedOrg.codes.find(code => code.code.toLowerCase() === orgCode.toLowerCase());
+        if (matchingCode) {
+          // Found matching code in saved organization data
+          validationIcon.innerHTML = '<i class="fas fa-check-circle fa-2x text-success"></i>';
+          validationText.innerHTML = '<strong class="text-success">✓ Valid Code</strong><br><small class="text-muted">Organization found (Saved)</small>';
+
+          // Show organization details
+          document.getElementById('orgName').textContent = savedOrg.name || 'Organization';
+          document.getElementById('orgIndustry').textContent = savedOrg.industry ? savedOrg.industry.charAt(0).toUpperCase() + savedOrg.industry.slice(1) : selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1);
+          document.getElementById('orgAdmin').textContent = 'Organization Admin';
+          document.getElementById('joiningOrgName').textContent = savedOrg.name || 'Organization';
+          document.getElementById('organizationDetails').classList.remove('d-none');
+          document.getElementById('continueToRegistration').classList.remove('d-none');
+
+          document.getElementById('organization_code').setAttribute('data-validated', 'true');
+          document.getElementById('organization_code').setAttribute('data-org-id', savedOrg.id || 'saved_org');
+
+          showFeedback(`✓ Connected to ${savedOrg.name || 'Organization'}`, 'success');
+          return;
+        }
+      }
+
+      try {
+        // Try real API first
+        const res = await fetch(`${API_BASE}/api/validate-org-code`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ code: orgCode, industry_type: selectedIndustry })
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+
+          if (result.success) {
+            validationIcon.innerHTML = '<i class="fas fa-check-circle fa-2x text-success"></i>';
+            validationText.innerHTML = '<strong class="text-success">✓ Valid Code</strong><br><small class="text-muted">Organization found</small>';
+
+            // Show organization details
+            document.getElementById('orgName').textContent = result.organization_name || result.name || 'Organization';
+            document.getElementById('orgIndustry').textContent = selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1);
+            document.getElementById('orgAdmin').textContent = result.admin_name || result.admin || 'Organization Admin';
+            document.getElementById('joiningOrgName').textContent = result.organization_name || result.name || 'Organization';
+            document.getElementById('organizationDetails').classList.remove('d-none');
+            document.getElementById('continueToRegistration').classList.remove('d-none');
+
+            document.getElementById('organization_code').setAttribute('data-validated', 'true');
+            document.getElementById('organization_code').setAttribute('data-org-id', result.organization_id || result.id);
+
+            showFeedback(`✓ Connected to ${result.organization_name || result.name || 'Organization'}`, 'success');
+          } else {
+            validationIcon.innerHTML = '<i class="fas fa-times-circle fa-2x text-danger"></i>';
+            validationText.innerHTML = '<strong class="text-danger">✗ Invalid Code</strong><br><small class="text-muted">Code not found or invalid</small>';
+            document.getElementById('organizationDetails').classList.add('d-none');
+            document.getElementById('continueToRegistration').classList.add('d-none');
+            showFeedback(result.message || 'Invalid organization code. Please check the code or contact your administrator.', 'danger');
+          }
+        } else if (res.status === 404) {
+          // API endpoint not found, use demo fallback
+          console.log('API endpoint not found, using demo fallback');
+          await validateOrgCodeDemo(orgCode, selectedIndustry, validationIcon, validationText);
+        } else {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+      } catch (err) {
+        console.error('Organization validation error:', err);
+        // If real API fails, try demo fallback
+        if (err.message.includes('404') || err.message.includes('Failed to fetch')) {
+          console.log('Real API failed, using demo fallback');
+          await validateOrgCodeDemo(orgCode, selectedIndustry, validationIcon, validationText);
+        } else {
+          validationIcon.innerHTML = '<i class="fas fa-exclamation-triangle fa-2x text-warning"></i>';
+          validationText.innerHTML = '<strong class="text-warning">Connection Error</strong><br><small class="text-muted">Please try again</small>';
+          document.getElementById('organizationDetails').classList.add('d-none');
+          document.getElementById('continueToRegistration').classList.add('d-none');
+          showFeedback('Unable to validate code. Please check your connection and try again.', 'danger');
+        }
+      }
+    });
+
+    // Demo fallback function for organization code validation
+    async function validateOrgCodeDemo(orgCode, industry, validationIcon, validationText) {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Demo organization codes for different industries
+      const demoCodes = {
+        healthcare: ['HOSP-2025-A1B2C3', 'CLINIC-2025-D4E5F6', 'MEDCTR-2025-G7H8I9'],
+        education: ['UNIV-2025-J1K2L3', 'SCHOOL-2025-M4N5O6', 'COLLEGE-2025-P7Q8R9'],
+        corporate: ['TECH-2025-S1T2U3', 'CORP-2025-V4W5X6', 'BIZ-2025-Y7Z8A9'],
+        manufacturing: ['FACTORY-2025-B1C2D3', 'PLANT-2025-E4F5G6', 'PROD-2025-H7I8J9'],
+        government: ['GOV-2025-K1L2M3', 'AGENCY-2025-N4O5P6', 'DEPT-2025-Q7R8S9'],
+        retail: ['STORE-2025-T1U2V3', 'RETAIL-2025-W4X5Y6', 'SHOP-2025-Z7A8B9']
+      };
+
+      const industryCodes = demoCodes[industry] || [];
+      const isValidCode = industryCodes.some(code => code.toLowerCase() === orgCode.toLowerCase());
+
+      if (isValidCode) {
+        // Mock successful validation
+        const mockResult = {
+          organization_name: getMockOrgName(orgCode, industry),
+          admin_name: getMockAdminName(orgCode, industry),
+          organization_id: `org_${orgCode.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`
+        };
+
+        validationIcon.innerHTML = '<i class="fas fa-check-circle fa-2x text-success"></i>';
+        validationText.innerHTML = '<strong class="text-success">✓ Valid Code</strong><br><small class="text-muted">Organization found (Demo)</small>';
+
+        // Show organization details
+        document.getElementById('orgName').textContent = mockResult.organization_name;
+        document.getElementById('orgIndustry').textContent = industry.charAt(0).toUpperCase() + industry.slice(1);
+        document.getElementById('orgAdmin').textContent = mockResult.admin_name;
+        document.getElementById('joiningOrgName').textContent = mockResult.organization_name;
+        document.getElementById('organizationDetails').classList.remove('d-none');
+        document.getElementById('continueToRegistration').classList.remove('d-none');
+
+        document.getElementById('organization_code').setAttribute('data-validated', 'true');
+        document.getElementById('organization_code').setAttribute('data-org-id', mockResult.organization_id);
+
+        showFeedback(`✓ Connected to ${mockResult.organization_name} (Demo Mode)`, 'success');
+      } else {
+        validationIcon.innerHTML = '<i class="fas fa-times-circle fa-2x text-danger"></i>';
+        validationText.innerHTML = '<strong class="text-danger">✗ Invalid Code</strong><br><small class="text-muted">Code not found</small>';
+        document.getElementById('organizationDetails').classList.add('d-none');
+        document.getElementById('continueToRegistration').classList.add('d-none');
+        showFeedback('Invalid organization code. Please check the code or contact your administrator.', 'danger');
+      }
+    }
+
+    // Helper functions for demo data
+    function getMockOrgName(code, industry) {
+      const names = {
+        healthcare: { 'HOSP-2025-A1B2C3': 'City General Hospital', 'CLINIC-2025-D4E5F6': 'Downtown Medical Clinic', 'MEDCTR-2025-G7H8I9': 'Regional Medical Center' },
+        education: { 'UNIV-2025-J1K2L3': 'State University', 'SCHOOL-2025-M4N5O6': 'Lincoln High School', 'COLLEGE-2025-P7Q8R9': 'Community College' },
+        corporate: { 'TECH-2025-S1T2U3': 'TechCorp Solutions', 'CORP-2025-V4W5X6': 'Global Enterprises', 'BIZ-2025-Y7Z8A9': 'Innovative Solutions Inc' },
+        manufacturing: { 'FACTORY-2025-B1C2D3': 'Precision Manufacturing', 'PLANT-2025-E4F5G6': 'Industrial Solutions', 'PROD-2025-H7I8J9': 'Advanced Manufacturing Co' },
+        government: { 'GOV-2025-K1L2M3': 'City Administration', 'AGENCY-2025-N4O5P6': 'Public Services Department', 'DEPT-2025-Q7R8S9': 'State Government Office' },
+        retail: { 'STORE-2025-T1U2V3': 'MegaMart Superstore', 'RETAIL-2025-W4X5Y6': 'Fashion Central', 'SHOP-2025-Z7A8B9': 'Electronics Plus' }
+      };
+      return names[industry]?.[code] || 'Demo Organization';
+    }
+
+    function getMockAdminName(code, industry) {
+      const admins = {
+        healthcare: { 'HOSP-2025-A1B2C3': 'Dr. Sarah Johnson', 'CLINIC-2025-D4E5F6': 'Dr. Michael Chen', 'MEDCTR-2025-G7H8I9': 'Dr. Emily Rodriguez' },
+        education: { 'UNIV-2025-J1K2L3': 'Prof. Robert Davis', 'SCHOOL-2025-M4N5O6': 'Ms. Jennifer Wilson', 'COLLEGE-2025-P7Q8R9': 'Dr. David Thompson' },
+        corporate: { 'TECH-2025-S1T2U3': 'John Anderson', 'CORP-2025-V4W5X6': 'Sarah Martinez', 'BIZ-2025-Y7Z8A9': 'Mike Johnson' },
+        manufacturing: { 'FACTORY-2025-B1C2D3': 'Tom Wilson', 'PLANT-2025-E4F5G6': 'Lisa Brown', 'PROD-2025-H7I8J9': 'James Miller' },
+        government: { 'GOV-2025-K1L2M3': 'Mayor Robert Taylor', 'AGENCY-2025-N4O5P6': 'Director Susan Lee', 'DEPT-2025-Q7R8S9': 'Commissioner Mark Davis' },
+        retail: { 'STORE-2025-T1U2V3': 'Store Manager Alex Chen', 'RETAIL-2025-W4X5Y6': 'Operations Manager Maria Garcia', 'SHOP-2025-Z7A8B9': 'Branch Manager David Kim' }
+      };
+      return admins[industry]?.[code] || 'Organization Admin';
+    }
+
+    // Industry-specific department structures
+    const industryDepartments = {
+      healthcare: [
+        'Emergency Room (ER)',
+        'Intensive Care Unit (ICU)',
+        'Pediatrics',
+        'Radiology',
+        'Pharmacy',
+        'Surgery',
+        'Cardiology',
+        'Neurology',
+        'Oncology',
+        'Administration'
+      ],
+      education: [
+        'Mathematics',
+        'Science',
+        'English',
+        'History',
+        'Computer Science',
+        'Physical Education',
+        'Arts',
+        'Music',
+        'Library',
+        'Administration'
+      ],
+      corporate: [
+        'Information Technology (IT)',
+        'Human Resources (HR)',
+        'Finance',
+        'Marketing',
+        'Sales',
+        'Operations',
+        'Legal',
+        'Research & Development',
+        'Customer Service',
+        'Executive'
+      ],
+      manufacturing: [
+        'Production Line A',
+        'Production Line B',
+        'Quality Control',
+        'Maintenance',
+        'Safety & Compliance',
+        'Logistics',
+        'Engineering',
+        'Supply Chain',
+        'Warehouse',
+        'Management'
+      ],
+      government: [
+        'Public Services',
+        'Law Enforcement',
+        'Public Health',
+        'Education',
+        'Transportation',
+        'Environmental',
+        'Finance',
+        'Human Services',
+        'Planning',
+        'Administration'
+      ],
+      retail: [
+        'Sales Floor',
+        'Customer Service',
+        'Stock Room',
+        'Cashier',
+        'Management',
+        'Loss Prevention',
+        'Visual Merchandising',
+        'Receiving',
+        'Housekeeping',
+        'Administration'
+      ]
+    };
+
+    function populateRolesForIndustry(industry) {
+      const roleSelect = document.getElementById('role');
+      roleSelect.innerHTML = '<option value="">Select your role</option>';
+      if(!industryRoles[industry]) return;
+
+      industryRoles[industry].forEach(role => {
+        roleSelect.innerHTML += `<option value="${role}">${role}</option>`;
+      });
+    }
+
+    function populateDepartmentsForIndustry(industry) {
+      const deptSelect = document.getElementById('department');
+      deptSelect.innerHTML = '<option value="">Select department</option>';
+      if(!industryDepartments[industry]) return;
+
+      industryDepartments[industry].forEach(dept => {
+        deptSelect.innerHTML += `<option value="${dept}">${dept}</option>`;
+      });
+    }
+
+    function renderRoleSpecificFields(industry) {
+      const container = document.getElementById('roleSpecificFields');
+      container.innerHTML = '';
+
+      if(!industryFields[industry]) {
+        container.classList.add('d-none');
+        return;
+      }
+
+      container.classList.remove('d-none');
+      container.innerHTML = '<h5 class="mb-3">Role-Specific Information</h5>';
+
+      industryFields[industry].forEach(field => {
+        if(field.type === 'text'){
+          container.innerHTML += `
+            <div class="mb-3">
+              <label class="form-label" for="${field.name}">${field.label}</label>
+              <input type="text" id="${field.name}" name="${field.name}" class="form-control" autocomplete="off" placeholder="Enter ${field.label.toLowerCase()}">
+            </div>`;
+        } else if(field.type === 'select') {
+          let options = `<option value="">Select ${field.label}</option>`;
+          field.options.forEach(opt=>{
+            options += `<option value="${opt}">${opt}</option>`;
+          });
+          container.innerHTML += `
+            <div class="mb-3">
+              <label class="form-label" for="${field.name}">${field.label}</label>
+              <select id="${field.name}" name="${field.name}" class="form-select" autocomplete="off">${options}</select>
+            </div>`;
+        }
+      });
+    }
+
+    // Update form submission to include department and role-specific data
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if(!selectedIndustry){
+        showFeedback('Please select an industry first.', 'danger');
+        return;
+      }
+
+      const orgCodeInput = document.getElementById('organization_code');
+      if (!orgCodeInput) {
+        showFeedback('Page error: organization code input not found. Please refresh the page.', 'danger');
+        return;
+      }
+
+      const isValidated = orgCodeInput.getAttribute('data-validated') === 'true';
+      const orgId = orgCodeInput.getAttribute('data-org-id');
+
+      if (!isValidated || !orgId) {
+        showFeedback('Please validate your organization code before registering.', 'danger');
+        return;
+      }
+
+      // Safe element access with null checks
+      const nameInput = e.target.name;
+      const emailInput = e.target.email;
+      const phoneInput = e.target.phone;
+      const roleInput = e.target.role;
+      const departmentInput = e.target.department;
+      const passwordInput = e.target.password;
+
+      if (!nameInput || !emailInput || !phoneInput || !roleInput || !departmentInput || !passwordInput) {
+        showFeedback('Page error: form elements not found. Please refresh the page.', 'danger');
+        return;
+      }
+
+      const formData = {
+        name: nameInput.value ? nameInput.value.trim() : '',
+        email: emailInput.value ? emailInput.value.trim() : '',
+        phone: phoneInput.value ? phoneInput.value.trim() : '',
+        role: roleInput.value || '',
+        department: departmentInput.value || '',
+        password: passwordInput.value || '',
+        industry_type: selectedIndustry,
+        organization_code: orgCodeInput.value ? orgCodeInput.value.trim() : '',
+        organization_id: orgId,
+        profile_data: {}
+      };
+
+      // Collect role-specific fields
+      document.querySelectorAll('#roleSpecificFields input, #roleSpecificFields select').forEach(el=>{
+        if(el && el.value && el.value.trim()){
+          formData.profile_data[el.id] = el.value.trim();
+        }
+      });
+
+      // Debug logging for department selection
+      console.log('Form submission debug:');
+      console.log('Selected industry:', selectedIndustry);
+      console.log('Department input value:', departmentInput.value);
+      console.log('Department input element:', departmentInput);
+      console.log('Department options count:', departmentInput && departmentInput.options ? departmentInput.options.length : 0);
+      if (departmentInput && departmentInput.options) {
+        Array.from(departmentInput.options).forEach((opt, idx) => {
+          console.log(`Option ${idx}: value="${opt.value}" text="${opt.text}"`);
+        });
+      }
+
+      // Validate required fields with better error messages
+      if(!formData.name){
+        showFeedback('Please enter your full name.', 'danger');
+        document.getElementById('name').focus();
+        return;
+      }
+      if(!formData.email){
+        showFeedback('Please enter your email address.', 'danger');
+        document.getElementById('email').focus();
+        return;
+      }
+      if(!formData.phone){
+        showFeedback('Please enter your phone number.', 'danger');
+        document.getElementById('phone').focus();
+        return;
+      }
+      if(!formData.role){
+        showFeedback('Please select your role.', 'danger');
+        document.getElementById('role').focus();
+        return;
+      }
+
+      // Enhanced department validation
+      if(!formData.department || formData.department === ''){
+        // Check if department dropdown has options
+        const deptSelect = document.getElementById('department');
+        if (deptSelect && deptSelect.options && deptSelect.options.length <= 1) {
+          showFeedback('Department options are not loaded. Please go back and try again.', 'danger');
+          return;
+        }
+        showFeedback('Please select your department.', 'danger');
+        document.getElementById('department').focus();
+        return;
+      }
+      if(!formData.password){
+        showFeedback('Please enter a password.', 'danger');
+        document.getElementById('password').focus();
+        return;
+      }
+      if(!formData.organization_code){
+        showFeedback('Please enter your organization code.', 'danger');
+        document.getElementById('organization_code').focus();
+        return;
+      }
+
+      // Additional validation
+      if(formData.password.length < 6){
+        showFeedback('Password must be at least 6 characters long.', 'danger');
+        document.getElementById('password').focus();
+        return;
+      }
+
+      if(!/\S+@\S+\.\S+/.test(formData.email)){
+        showFeedback('Please enter a valid email address.', 'danger');
+        document.getElementById('email').focus();
+        return;
+      }
+
+      showFeedback('Registering your account...', 'info');
+      try{
+        const res = await fetch(`${API_BASE}/api/register`, {
+          method : 'POST',
+          headers : {'Content-Type': 'application/json'},
+          body : JSON.stringify(formData)
+        });
+        const result = await res.json();
+        if(result.success){
+          registeredId = result.digital_id;
+          showFeedback('Registration successful! Your account is pending admin approval. You will receive an email once approved.', 'success');
+          // Note: OTP verification is still required for email verification
+          const otpModal = new bootstrap.Modal(document.getElementById('otpModal'), {
+            backdrop: 'static',
+            keyboard: false
+          });
+          otpModal.show();
+        } else {
+          showFeedback(result.message || 'Registration failed.', 'danger');
+        }
+      } catch(err){
+        showFeedback('Network error. Please try again.', 'danger');
+      }
+    });
+
+    document.getElementById('togglePassword').addEventListener('click', () => {
+      togglePassword('password', 'togglePassword');
+    });
+
+    document.getElementById('toggleLoginPassword').addEventListener('click', () => {
+      togglePassword('loginPassword', 'toggleLoginPassword');
+    });
+
+    function togglePassword(inputId, toggleBtnId) {
+      const input = document.getElementById(inputId);
+      const btn = document.getElementById(toggleBtnId);
+      const icon = btn.querySelector('i');
+      if(input.type === 'password'){
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    document.getElementById('showLoginModal').addEventListener('click', (e) => {
+      e.preventDefault();
+      const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+      loginModal.show();
+    });
+
+    // Show forgot password modal
+    document.getElementById('showForgotPasswordModal').addEventListener('click', (e) => {
+      e.preventDefault();
+      const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+      if (loginModal) loginModal.hide();
+      const forgotPasswordModal = new bootstrap.Modal(document.getElementById('forgotPasswordModal'));
+      forgotPasswordModal.show();
+    });
+
+    // Create Organization Form Submission
+    document.getElementById('createOrgForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Get form data
+      const formData = {
+        organization_name: document.getElementById('modalOrgName').value.trim(),
+        organization_type: document.getElementById('modalOrgType').value || null,
+        organization_address: document.getElementById('modalOrgAddress').value.trim() || null,
+        organization_contact_email: document.getElementById('modalOrgContactEmail').value.trim() || null,
+        organization_contact_phone: document.getElementById('modalOrgContactPhone').value.trim() || null,
+        name: document.getElementById('modalAdminName').value.trim(),
+        email: document.getElementById('modalAdminEmail').value.trim(),
+        phone: document.getElementById('modalAdminPhone').value.trim(),
+        password: document.getElementById('modalAdminPassword').value,
+        industry_type: selectedIndustry
+      };
+
+      // Validation
+      if (!formData.organization_name) {
+        showFeedback('Please enter an organization name.', 'danger');
+        document.getElementById('modalOrgName').focus();
+        return;
+      }
+      if (!formData.name) {
+        showFeedback('Please enter your full name.', 'danger');
+        document.getElementById('modalAdminName').focus();
+        return;
+      }
+      if (!formData.email) {
+        showFeedback('Please enter your email address.', 'danger');
+        document.getElementById('modalAdminEmail').focus();
+        return;
+      }
+      if (!formData.phone) {
+        showFeedback('Please enter your phone number.', 'danger');
+        document.getElementById('modalAdminPhone').focus();
+        return;
+      }
+      if (!formData.password) {
+        showFeedback('Please enter a password.', 'danger');
+        document.getElementById('modalAdminPassword').focus();
+        return;
+      }
+
+      // Additional validation
+      if (formData.password.length < 6) {
+        showFeedback('Password must be at least 6 characters long.', 'danger');
+        document.getElementById('modalAdminPassword').focus();
+        return;
+      }
+
+      if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        showFeedback('Please enter a valid email address.', 'danger');
+        document.getElementById('modalAdminEmail').focus();
+        return;
+      }
+
+      showFeedback('Creating your organization and account...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/register-organization`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(formData)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          showFeedback('Organization created successfully! Generating organization code...', 'success');
+
+          // Auto-generate organization code after successful organization creation
+          try {
+            const codeResponse = await fetch(`${API_BASE}/api/organization/generate-code`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${result.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                prefix: '',
+                description: `Auto-generated code for ${formData.organization_name} on ${new Date().toLocaleDateString()}`
+              })
+            });
+
+            let generatedCode = null;
+            if (codeResponse.ok) {
+              const codeResult = await codeResponse.json();
+              if (codeResult.success) {
+                generatedCode = codeResult.code.code;
+                console.log('✅ Organization code auto-generated:', generatedCode);
+              } else {
+                console.warn('⚠️ Code generation failed:', codeResult.message);
+              }
+            } else {
+              console.warn('⚠️ Code generation API failed');
+            }
+
+            // Save organization setup to localStorage for login validation
+            const organizationSetup = {
+              id: result.organization_id || Date.now().toString(),
+              setupName: formData.organization_name,
+              name: formData.organization_name,
+              type: formData.industry_type,
+              address: formData.organization_address,
+              phone: formData.organization_contact_phone,
+              email: formData.organization_contact_email,
+              codes: generatedCode ? [{ code: generatedCode, is_active: true, usage_count: 0 }] : [],
+              created_at: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              source: 'registration' // Mark as created through registration
+            };
+
+            // Get existing setups
+            let existingSetups = JSON.parse(localStorage.getItem('organizationSetups') || '[]');
+
+            // Check if setup with this name already exists
+            const existingIndex = existingSetups.findIndex(s => s.name === formData.organization_name);
+            if (existingIndex >= 0) {
+              // Update existing setup
+              existingSetups[existingIndex] = { ...existingSetups[existingIndex], ...organizationSetup };
+            } else {
+              // Add new setup
+              existingSetups.push(organizationSetup);
+            }
+
+            // Save back to localStorage
+            localStorage.setItem('organizationSetups', JSON.stringify(existingSetups));
+            console.log('Organization setup saved to localStorage for registration:', organizationSetup);
+
+            // Show success message with code and Digital ID
+            if (generatedCode) {
+              showFeedback(`🎉 Organization "${formData.organization_name}" created successfully!\n\nYour organization code: ${generatedCode}\n\nYour admin Digital ID: ${result.digital_id}\n\nYou can now login with your Digital ID and password, or use the code to register employees.`, 'success');
+
+              // Store the generated code and Digital ID temporarily for potential use
+              sessionStorage.setItem('lastGeneratedOrgCode', generatedCode);
+              sessionStorage.setItem('lastCreatedOrgName', formData.organization_name);
+              sessionStorage.setItem('adminDigitalId', result.digital_id);
+            } else {
+              showFeedback(`Organization "${formData.organization_name}" created successfully, but code generation failed. Your admin Digital ID is: ${result.digital_id}. Please generate a code manually from the admin dashboard.`, 'warning');
+            }
+
+            // Store authentication data for later use (don't auto-login)
+            sessionStorage.setItem('pendingOrgToken', result.token);
+            sessionStorage.setItem('pendingOrgDigitalId', result.digital_id);
+            sessionStorage.setItem('pendingOrgRole', result.role);
+            sessionStorage.setItem('pendingOrgName', result.name);
+            sessionStorage.setItem('pendingOrgIndustry', result.industry_type);
+
+            // Close the modal after showing the code
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createOrgModal'));
+            if (modal) modal.hide();
+
+            // Don't auto-redirect - let user see the code first
+            // They can then choose to login or continue with registration
+
+          } catch (codeGenError) {
+            console.error('Error in code generation process:', codeGenError);
+            showFeedback(`Organization "${formData.organization_name}" created successfully, but there was an error generating the code. Please try again or generate manually.`, 'warning');
+
+            // Still close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createOrgModal'));
+            if (modal) modal.hide();
+          }
+        } else {
+          showFeedback(result.message || 'Failed to create organization.', 'danger');
+        }
+      } catch (orgCreationError) {
+        console.error('Organization creation error:', orgCreationError);
+        showFeedback('Network error. Please try again.', 'danger');
+      }
+    });
+
+    // Toggle admin password visibility
+    const modalToggleBtn = document.getElementById('modalToggleAdminPassword');
+    if (modalToggleBtn) {
+      modalToggleBtn.addEventListener('click', () => {
+        togglePassword('modalAdminPassword', 'modalToggleAdminPassword');
+      });
+    }
+
+
+
+
+
+    document.getElementById('otpForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('otpInput').value.trim();
+      if(!registeredId || !code){
+        showOTPFeedback('Please enter the verification code.', 'danger');
+        return;
+      }
+      showOTPFeedback('Verifying code...', 'info');
+      try{
+        const res = await fetch(`${API_BASE}/api/verify`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({digital_id: registeredId, otp: code})
+        });
+        const result = await res.json();
+        if(result.success){
+          showOTPFeedback('Verification successful! Redirecting to dashboard...', 'success');
+          
+          // Store user information in session and local storage with consistent keys
+          sessionStorage.setItem('token', result.token);
+          sessionStorage.setItem('digitalid', registeredId); // always use 'digitalid'
+          sessionStorage.setItem('role', result.role || 'user');
+          sessionStorage.setItem('name', result.name || '');
+          sessionStorage.setItem('industrytype', result.industry_type || '');
+
+          localStorage.setItem('token', result.token);
+          localStorage.setItem('digitalid', registeredId); // always use 'digitalid'
+          localStorage.setItem('role', result.role || 'user');
+          localStorage.setItem('name', result.name || '');
+          localStorage.setItem('industrytype', result.industry_type || '');
+
+          setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById('otpModal')).hide();
+
+            // Enhanced redirect logic with industry-aware routing
+            const userRole = (result.role || 'user').toLowerCase().trim();
+            const userIndustry = (result.industry_type || '').toLowerCase().trim();
+
+            console.log('🔄 OTP Verification - Redirect Debug:', {
+              role: userRole,
+              industry: userIndustry,
+              name: result.name,
+              digital_id: result.digital_id
+            });
+
+            // Check for admin roles first
+            const adminRoles = ['admin', 'administrator', 'system administrator'];
+            const isAdmin = adminRoles.some(role => userRole.includes(role));
+
+            let redirectUrl;
+
+            if (isAdmin) {
+              // Admin routing based on industry
+              switch (userIndustry) {
+                case 'healthcare':
+                  redirectUrl = '/pages/healthcare-admin-dashboard.html';
+                  break;
+                case 'corporate':
+                  redirectUrl = '/pages/corporate-admin-dashboard.html';
+                  break;
+                case 'manufacturing':
+                  redirectUrl = '/pages/manufacturing-admin-dashboard.html';
+                  break;
+                case 'government':
+                  redirectUrl = '/pages/government-admin-dashboard.html';
+                  break;
+                case 'retail':
+                  redirectUrl = '/pages/retail-admin-dashboard.html';
+                  break;
+                case 'education':
+                  redirectUrl = '/pages/admin-dashboard.html';
+                  break;
+                default:
+                  redirectUrl = '/pages/admin-dashboard.html'; // fallback
+                  break;
+              }
+              console.log('🏢 Admin redirecting to:', redirectUrl);
+            } else {
+              // Regular user routing based on industry
+              switch (userIndustry) {
+                case 'healthcare':
+                  redirectUrl = '/pages/healthcare-user-dashboard.html';
+                  break;
+                case 'corporate':
+                  redirectUrl = '/pages/corporate-user-dashboard.html';
+                  break;
+                case 'manufacturing':
+                  redirectUrl = '/pages/manufacturing-user-dashboard.html';
+                  break;
+                case 'government':
+                  redirectUrl = '/pages/government-user-dashboard.html';
+                  break;
+                case 'retail':
+                  redirectUrl = '/pages/retail-user-dashboard.html';
+                  break;
+                case 'education':
+                  // Check for teacher roles in education
+                  if (userRole.includes('teacher') || userRole.includes('professor') || userRole.includes('faculty')) {
+                    redirectUrl = '/pages/teacher-dashboard.html';
+                  } else {
+                    redirectUrl = '/pages/user-dashboard.html';
+                  }
+                  break;
+                default:
+                  redirectUrl = '/pages/user-dashboard.html'; // fallback for unknown industries
+                  break;
+              }
+              console.log('👤 User redirecting to:', redirectUrl);
+            }
+
+            console.log('🎯 Final OTP verification redirect URL:', redirectUrl);
+            window.location.href = redirectUrl;
+          }, 1500);
+        } else {
+          showOTPFeedback(result.message || 'Verification failed.', 'danger');
+        }
+      } catch(err){
+        showOTPFeedback('Network error. Please try again.', 'danger');
+      }
+    });
+
+    document.getElementById('resendOtpBtn').addEventListener('click', async () => {
+      if (!registeredId) {
+        showOTPFeedback('No registration in progress.', 'danger');
+        return;
+      }
+      showOTPFeedback('Resending code...', 'info');
+      try {
+        const res = await fetch(`${API_BASE}/api/resend-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ digital_id: registeredId })
+        });
+        const result = await res.json();
+        if (result.success) {
+          showOTPFeedback('New code sent to your email.', 'success');
+        } else {
+          showOTPFeedback(result.message, 'danger');
+        }
+      } catch (err) {
+        showOTPFeedback('Network error.', 'danger');
+      }
+    });
+
+    document.getElementById('reopenModalBtn').addEventListener('click', () => {
+      if (!registeredId) return;
+      const otpModal = new bootstrap.Modal(document.getElementById('otpModal'), {
+        backdrop: 'static',
+        keyboard: false
+      });
+      otpModal.show();
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const digitalId = document.getElementById('loginDigitalId').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!digitalId || !password) {
+        showLoginStatus('Please enter both Digital ID and password.', 'danger');
+        return;
+      }
+
+      console.log('Login attempt for:', digitalId);
+
+      // Use the authManager.login() method for proper industry-aware routing
+      try {
+        const result = await authManager.login({
+          digitalId: digitalId,
+          password: password
+        });
+
+        console.log('Login result:', result);
+
+        if (result.success) {
+          showLoginStatus('Login successful! Redirecting...', 'success');
+          console.log('Redirecting to:', result.redirectUrl);
+
+          // Close modal and redirect will be handled by authManager
+          setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+            // Redirect to the appropriate dashboard based on industry and role
+            if (result.redirectUrl) {
+              window.location.href = result.redirectUrl;
+            } else {
+              console.error('No redirect URL provided, defaulting to user-dashboard.html');
+              window.location.href = '/pages/user-dashboard.html';
+            }
+          }, 1500);
+        } else {
+          showLoginStatus(result.message || 'Login failed.', 'danger');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        if (error.message && error.message.includes('verify your email')) {
+          showLoginStatus('Please verify your email first.', 'warning');
+          // Extract digital_id from error if available for OTP verification
+          const digitalIdMatch = error.message.match(/digital_id["\s:]+([^"\s]+)/i);
+          if (digitalIdMatch) {
+            registeredId = digitalIdMatch[1];
+          } else {
+            registeredId = digitalId; // fallback
+          }
+          setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+            const otpModal = new bootstrap.Modal(document.getElementById('otpModal'), {
+              backdrop: 'static',
+              keyboard: false
+            });
+            otpModal.show();
+          }, 1500);
+        } else {
+          showLoginStatus(error.message || 'Login failed.', 'danger');
+        }
+      }
+    });
+
+    // Get saved organization data from localStorage
+    function getSavedOrganization() {
+      try {
+        const saved = localStorage.getItem('organizationData');
+        return saved ? JSON.parse(saved) : null;
+      } catch (error) {
+        console.error('Error loading saved organization:', error);
+        return null;
+      }
+    }
+
+    // Utility feedback functions with null checks
+    function showFeedback(message, type) {
+      const feedback = document.getElementById('feedback');
+      if (feedback) {
+        feedback.textContent = message;
+        feedback.className = 'alert alert-' + type;
+        feedback.classList.remove('d-none');
+      } else {
+        console.error('Feedback element not found');
+      }
+    }
+
+    function showOTPFeedback(message, type) {
+      const feedback = document.getElementById('otpFeedback');
+      if (feedback) {
+        feedback.textContent = message;
+        feedback.className = 'alert alert-' + type;
+        feedback.classList.remove('d-none');
+      } else {
+        console.error('OTP feedback element not found');
+      }
+    }
+
+    function showLoginStatus(message, type) {
+      const status = document.getElementById('loginStatus');
+      if (status) {
+        status.textContent = message;
+        status.className = 'alert alert-' + type;
+        status.classList.remove('d-none');
+      } else {
+        console.error('Login status element not found');
+      }
+    }
+
+    // Forgot Password Form Submission
+    document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+
+      if (!email) {
+        showForgotPasswordStatus('Please enter your email address.', 'warning');
+        return;
+      }
+
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        showForgotPasswordStatus('Please enter a valid email address.', 'warning');
+        document.getElementById('forgotEmail').focus();
+        return;
+      }
+
+      showForgotPasswordStatus('Sending reset instructions...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/forgot-password`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email: email.toLowerCase() })
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          showForgotPasswordStatus('Password reset instructions have been sent to your email address.', 'success');
+          document.getElementById('forgotEmail').value = '';
+
+          // Close modal after 3 seconds
+          setTimeout(() => {
+            const forgotPasswordModal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+            if (forgotPasswordModal) {
+              forgotPasswordModal.hide();
+            }
+          }, 3000);
+        } else {
+          showForgotPasswordStatus(result.message || 'Failed to send reset instructions. Please try again.', 'danger');
+        }
+      } catch (err) {
+        console.error('Forgot password error:', err);
+        showForgotPasswordStatus('Network error. Please check your connection and try again.', 'danger');
+      }
+    });
+
+    function showForgotPasswordStatus(message, type) {
+      const status = document.getElementById('forgotPasswordStatus');
+      if (status) {
+        status.textContent = message;
+        status.className = 'alert alert-' + type;
+        status.classList.remove('d-none');
+      } else {
+        console.error('Forgot password status element not found');
+      }
+    }
+
+    }); // Close DOMContentLoaded event listener
+
+  </script>
+</body>
+</html>

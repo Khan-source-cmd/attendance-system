@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reports & Analytics | Universal Attendance System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+    
+    .navbar-custom {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .main-container {
+      padding: 2rem 0;
+    }
+    
+    .page-header {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+      border-radius: 20px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 15px 35px rgba(231, 76, 60, 0.3);
+    }
+    
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .metric-card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(135deg, #3498db, #2980b9);
+    }
+    
+    .metric-card.success::before { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+    .metric-card.warning::before { background: linear-gradient(135deg, #f39c12, #e67e22); }
+    .metric-card.danger::before { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+    
+    .metric-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .metric-trend {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    
+    .trend-up { color: #27ae60; }
+    .trend-down { color: #e74c3c; }
+    
+    .report-card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 400px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #dee2e6;
+    }
+    
+    .chart-placeholder {
+      text-align: center;
+      color: #6c757d;
+    }
+    
+    .period-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .period-btn {
+      padding: 0.5rem 1rem;
+      border: 2px solid #dee2e6;
+      background: white;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .period-btn.active {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white;
+      border-color: #e74c3c;
+    }
+    
+    .progress-ring {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 1rem;
+    }
+    
+    .progress-circle {
+      fill: none;
+      stroke: #ecf0f1;
+      stroke-width: 8;
+    }
+    
+    .progress-circle-fill {
+      fill: none;
+      stroke: #3498db;
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 283;
+      stroke-dashoffset: 283;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+      transition: stroke-dashoffset 1s ease;
+    }
+    
+    .performance-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .performance-item:hover {
+      background: #e9ecef;
+      transform: translateX(5px);
+    }
+    
+    .performance-metric {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .metric-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.2rem;
+    }
+    
+    .export-section {
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      color: white;
+      border-radius: 15px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .export-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    
+    .export-option {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    
+    .export-option:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .form-control, .form-select {
+      border: 2px solid #ecf0f1;
+      border-radius: 10px;
+      padding: 12px 15px;
+      transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+      border-color: #e74c3c;
+      box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+    }
+    
+    .btn-generate {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      border: none;
+      color: white;
+      border-radius: 10px;
+      padding: 12px 30px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-generate:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(231, 76, 60, 0.4);
+      color: white;
+    }
+    
+    @media (max-width: 768px) {
+      .period-selector {
+        flex-wrap: wrap;
+      }
+      
+      .chart-container {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+    <div class="container">
+      <a class="navbar-brand" href="#" data-nav="dashboard">
+        <i class="fas fa-chart-bar me-2"></i>Reports
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="#" data-nav="dashboard">
+              <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/pages/history.html">
+              <i class="fas fa-history me-1"></i>History
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/pages/profile.html">
+              <i class="fas fa-user me-1"></i>Profile
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="/pages/reports.html">
+              <i class="fas fa-chart-bar me-1"></i>Reports
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/pages/settings.html">
+              <i class="fas fa-cog me-1"></i>Settings
+            </a>
+          </li>
+          <li class="nav-item admin-only" style="display: none;">
+            <a class="nav-link" href="/pages/faculty-classes.html">
+              <i class="fas fa-chalkboard-teacher me-1"></i>Faculty Classes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showIntegrationsPage()">
+              <i class="fas fa-plug me-1"></i>Integrations
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="logout()">
+              <i class="fas fa-sign-out-alt me-1"></i>Logout
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container main-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1 class="mb-2">Reports & Analytics</h1>
+          <p class="mb-0 opacity-75">
+            <i class="fas fa-chart-line me-2"></i>Comprehensive analysis of your attendance patterns
+          </p>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-outline-light" onclick="generateFullReport()">
+            <i class="fas fa-file-alt me-2"></i>Generate Full Report
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-number" id="totalWorkingDays">-</div>
+        <div class="metric-label">Working Days</div>
+        <div class="metric-trend trend-up" id="workingDaysTrend">
+          <i class="fas fa-arrow-up me-1"></i>+2 this month
+        </div>
+      </div>
+      <div class="metric-card success">
+        <div class="metric-number" id="attendanceScore">-%</div>
+        <div class="metric-label">Attendance Score</div>
+        <div class="metric-trend trend-up" id="attendanceTrend">
+          <i class="fas fa-arrow-up me-1"></i>Excellent
+        </div>
+      </div>
+      <div class="metric-card warning">
+        <div class="metric-number" id="avgDailyHours">-h</div>
+        <div class="metric-label">Avg Daily Hours</div>
+        <div class="metric-trend" id="hoursTrend">
+          <i class="fas fa-clock me-1"></i>Target: 8h
+        </div>
+      </div>
+      <div class="metric-card danger">
+        <div class="metric-number" id="lateArrivals">-</div>
+        <div class="metric-label">Late Arrivals</div>
+        <div class="metric-trend trend-down" id="lateTrend">
+          <i class="fas fa-arrow-down me-1"></i>Improved
+        </div>
+      </div>
+    </div>
+
+    <!-- Time Period Selector -->
+    <div class="report-card">
+      <h5 class="mb-3"><i class="fas fa-calendar-alt me-2"></i>Analysis Period</h5>
+      <div class="period-selector">
+        <button class="period-btn" onclick="changePeriod(7, this)">Last 7 Days</button>
+        <button class="period-btn active" onclick="changePeriod(30, this)">Last 30 Days</button>
+        <button class="period-btn" onclick="changePeriod(90, this)">Last 90 Days</button>
+        <button class="period-btn" onclick="changePeriod(365, this)">Last Year</button>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row">
+      <div class="col-lg-8 mb-4">
+        <div class="report-card">
+          <h5 class="mb-4"><i class="fas fa-chart-line me-2"></i>Attendance Trends</h5>
+          <div class="chart-container">
+            <div class="chart-placeholder">
+              <i class="fas fa-chart-line fa-3x mb-3"></i>
+              <h5>Attendance Trend Chart</h5>
+              <p class="mb-0">Visual representation of your attendance patterns over time</p>
+              <button class="btn btn-primary mt-3" onclick="loadChart('trend')">
+                <i class="fas fa-play me-2"></i>Load Chart
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-4 mb-4">
+        <div class="report-card">
+          <h5 class="mb-4"><i class="fas fa-chart-pie me-2"></i>Attendance Distribution</h5>
+          <div class="text-center">
+            <svg class="progress-ring">
+              <circle class="progress-circle" cx="60" cy="60" r="45"></circle>
+              <circle class="progress-circle-fill" cx="60" cy="60" r="45" id="attendanceCircle"></circle>
+            </svg>
+            <h4 id="attendancePercentage">85%</h4>
+            <p class="text-muted mb-0">Overall Attendance Rate</p>
+          </div>
+          
+          <div class="mt-4">
+            <div class="performance-item">
+              <div class="performance-metric">
+                <div class="metric-icon" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">Present Days</div>
+                  <small class="text-muted" id="presentDaysDetail">22 out of 26 days</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="performance-item">
+              <div class="performance-metric">
+                <div class="metric-icon" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                  <i class="fas fa-times"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">Absent Days</div>
+                  <small class="text-muted" id="absentDaysDetail">4 days</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Insights -->
+    <div class="row">
+      <div class="col-lg-6 mb-4">
+        <div class="report-card">
+          <h5 class="mb-4"><i class="fas fa-clock me-2"></i>Time Patterns</h5>
+          <div class="chart-container" style="height: 300px;">
+            <div class="chart-placeholder">
+              <i class="fas fa-clock fa-3x mb-3"></i>
+              <h6>Punch-in Time Analysis</h6>
+              <p class="mb-0">Your typical arrival and departure patterns</p>
+              <button class="btn btn-primary mt-3" onclick="loadTimePatternsChart()">
+                <i class="fas fa-play me-2"></i>Load Time Patterns
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6 mb-4">
+        <div class="report-card">
+          <h5 class="mb-4"><i class="fas fa-trophy me-2"></i>Performance Metrics</h5>
+          
+          <div class="performance-item">
+            <div class="performance-metric">
+              <div class="metric-icon" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div>
+                <div class="fw-bold">Consistency Score</div>
+                <small class="text-muted">Regular attendance pattern</small>
+              </div>
+            </div>
+            <div class="h5 mb-0" id="consistencyScore">Calculating...</div>
+          </div>
+
+          <div class="performance-item">
+            <div class="performance-metric">
+              <div class="metric-icon" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                <i class="fas fa-stopwatch"></i>
+              </div>
+              <div>
+                <div class="fw-bold">Punctuality Score</div>
+                <small class="text-muted">On-time arrival rate</small>
+              </div>
+            </div>
+            <div class="h5 mb-0" id="punctualityScore">Calculating...</div>
+          </div>
+
+          <div class="performance-item">
+            <div class="performance-metric">
+              <div class="metric-icon" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <div>
+                <div class="fw-bold">Productivity Index</div>
+                <small class="text-muted">Based on working hours</small>
+              </div>
+            </div>
+            <div class="h5 mb-0" id="productivityIndex">Calculating...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export & Generate Reports -->
+    <div class="export-section">
+      <h5 class="mb-4"><i class="fas fa-download me-2"></i>Export Reports</h5>
+      <div class="export-options">
+        <div class="export-option" onclick="exportReport('pdf')">
+          <i class="fas fa-file-pdf fa-2x mb-2"></i>
+          <h6>PDF Report</h6>
+          <small>Comprehensive attendance report</small>
+        </div>
+        <div class="export-option" onclick="exportReport('excel')">
+          <i class="fas fa-file-excel fa-2x mb-2"></i>
+          <h6>Excel Spreadsheet</h6>
+          <small>Detailed data for analysis</small>
+        </div>
+        <div class="export-option" onclick="exportReport('csv')">
+          <i class="fas fa-file-csv fa-2x mb-2"></i>
+          <h6>CSV Data</h6>
+          <small>Raw attendance data</small>
+        </div>
+        <div class="export-option" onclick="exportReport('summary')">
+          <i class="fas fa-file-alt fa-2x mb-2"></i>
+          <h6>Summary Report</h6>
+          <small>Key metrics and insights</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Report Generator -->
+    <div class="report-card">
+      <h5 class="mb-4"><i class="fas fa-cogs me-2"></i>Custom Report Generator</h5>
+      <div class="row">
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Report Type</label>
+          <select class="form-select" id="reportType">
+            <option value="attendance">Attendance Summary</option>
+            <option value="punctuality">Punctuality Analysis</option>
+            <option value="patterns">Time Patterns</option>
+            <option value="comparison">Monthly Comparison</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">From Date</label>
+          <input type="date" class="form-control" id="customFromDate">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">To Date</label>
+          <input type="date" class="form-control" id="customToDate">
+        </div>
+        <div class="col-md-3 mb-3 d-flex align-items-end">
+          <button class="btn btn-generate w-100" onclick="generateCustomReport()">
+            <i class="fas fa-magic me-2"></i>Generate Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/navigation-fix.js"></script>
+  <script>
+    const API_BASE = 'http://localhost:4000';
+    
+    const token = localStorage.getItem('token');
+    const digitalId = localStorage.getItem('digitalid') || localStorage.getItem('digital_id');
+
+    if (!token || !digitalId) {
+      window.location.href = '/pages/register.html';
+    }
+
+    let currentPeriod = 30;
+    let attendanceData = [];
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      loadReportsData();
+      setDefaultDates();
+      updateAttendanceCircle(85); // Example percentage
+    });
+
+    // Set default dates for custom report
+    function setDefaultDates() {
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      
+      document.getElementById('customToDate').value = today.toISOString().split('T')[0];
+      document.getElementById('customFromDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+    }
+
+    // Load reports data
+    async function loadReportsData() {
+      try {
+        const response = await fetch(`${API_BASE}/api/attendance/history?limit=1000`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          attendanceData = result.history;
+          analyzeAttendanceData();
+        }
+      } catch (error) {
+        console.error('Reports data load error:', error);
+      }
+    }
+
+    // Analyze attendance data
+    function analyzeAttendanceData() {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - currentPeriod);
+      
+      const periodData = attendanceData.filter(record => {
+        const recordDate = new Date(record.timestamp);
+        return recordDate >= cutoffDate;
+      });
+      
+      // Calculate metrics
+      const dailyRecords = groupByDate(periodData);
+      const workingDays = Object.keys(dailyRecords).length;
+      const presentDays = Object.keys(dailyRecords).filter(date => 
+        dailyRecords[date].some(record => record.punch_type === 'in')
+      ).length;
+      
+      let totalHours = 0;
+      let lateArrivals = 0;
+      let validDays = 0;
+      
+      Object.values(dailyRecords).forEach(dayRecords => {
+        const inRecord = dayRecords.find(r => r.punch_type === 'in');
+        const outRecord = dayRecords.find(r => r.punch_type === 'out');
+        
+        if (inRecord && outRecord) {
+          const inTime = new Date(inRecord.timestamp);
+          const outTime = new Date(outRecord.timestamp);
+          const hours = (outTime - inTime) / (1000 * 60 * 60);
+          
+          if (hours > 0 && hours < 24) {
+            totalHours += hours;
+            validDays++;
+          }
+          
+          // Check if late (assuming 9 AM is standard time)
+          if (inTime.getHours() > 9 || (inTime.getHours() === 9 && inTime.getMinutes() > 15)) {
+            lateArrivals++;
+          }
+        }
+      });
+      
+      const attendanceScore = workingDays > 0 ? Math.round((presentDays / workingDays) * 100) : 0;
+      const avgDailyHours = validDays > 0 ? (totalHours / validDays).toFixed(1) : 0;
+      
+      // Update UI
+      document.getElementById('totalWorkingDays').textContent = workingDays;
+      document.getElementById('attendanceScore').textContent = attendanceScore + '%';
+      document.getElementById('avgDailyHours').textContent = avgDailyHours + 'h';
+      document.getElementById('lateArrivals').textContent = lateArrivals;
+      
+      // Update trends
+      updateTrends(attendanceScore, avgDailyHours, lateArrivals);
+      
+      // Update attendance circle
+      updateAttendanceCircle(attendanceScore);
+
+      // Update present/absent details
+      document.getElementById('presentDaysDetail').textContent = `${presentDays} out of ${workingDays} days`;
+      document.getElementById('absentDaysDetail').textContent = `${workingDays - presentDays} days`;
+
+      // Calculate and update performance metrics
+      calculatePerformanceMetrics(periodData, workingDays, presentDays, lateArrivals, totalHours, validDays);
+    }
+
+    // Group records by date
+    function groupByDate(records) {
+      const grouped = {};
+      records.forEach(record => {
+        const date = record.timestamp.split('T')[0];
+        if (!grouped[date]) {
+          grouped[date] = [];
+        }
+        grouped[date].push(record);
+      });
+      return grouped;
+    }
+
+    // Update trend indicators
+    function updateTrends(attendanceScore, avgHours, lateArrivals) {
+      const attendanceTrend = document.getElementById('attendanceTrend');
+      const hoursTrend = document.getElementById('hoursTrend');
+      const lateTrend = document.getElementById('lateTrend');
+      
+      if (attendanceScore >= 90) {
+        attendanceTrend.innerHTML = '<i class="fas fa-trophy me-1"></i>Excellent';
+        attendanceTrend.className = 'metric-trend trend-up';
+      } else if (attendanceScore >= 80) {
+        attendanceTrend.innerHTML = '<i class="fas fa-thumbs-up me-1"></i>Good';
+        attendanceTrend.className = 'metric-trend trend-up';
+      } else {
+        attendanceTrend.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Needs Improvement';
+        attendanceTrend.className = 'metric-trend trend-down';
+      }
+      
+      if (avgHours >= 8) {
+        hoursTrend.innerHTML = '<i class="fas fa-check me-1"></i>On Target';
+      } else {
+        hoursTrend.innerHTML = '<i class="fas fa-clock me-1"></i>Below Target';
+      }
+      
+      if (lateArrivals <= 2) {
+        lateTrend.innerHTML = '<i class="fas fa-star me-1"></i>Excellent';
+        lateTrend.className = 'metric-trend trend-up';
+      } else {
+        lateTrend.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Room for Improvement';
+        lateTrend.className = 'metric-trend trend-down';
+      }
+    }
+
+    // Update attendance circle progress
+    function updateAttendanceCircle(percentage) {
+      const circle = document.getElementById('attendanceCircle');
+      const circumference = 2 * Math.PI * 45;
+      const offset = circumference - (percentage / 100 * circumference);
+      
+      circle.style.strokeDashoffset = offset;
+      document.getElementById('attendancePercentage').textContent = percentage + '%';
+      
+      // Change color based on percentage
+      if (percentage >= 90) {
+        circle.style.stroke = '#27ae60';
+      } else if (percentage >= 80) {
+        circle.style.stroke = '#f39c12';
+      } else {
+        circle.style.stroke = '#e74c3c';
+      }
+    }
+
+    // Change analysis period
+    function changePeriod(days, button) {
+      currentPeriod = days;
+      
+      // Update active button
+      document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      
+      // Reload data
+      analyzeAttendanceData();
+    }
+
+    // Global chart variable
+    let attendanceChart = null;
+
+    // Load chart with real data
+    function loadChart(type) {
+      if (type === 'trend') {
+        createAttendanceTrendChart();
+      }
+    }
+
+    // Create attendance trend chart
+    function createAttendanceTrendChart() {
+      const chartContainer = document.querySelector('.chart-container');
+      if (!chartContainer) return;
+
+      // Clear existing content
+      chartContainer.innerHTML = '<canvas id="attendanceTrendChart"></canvas>';
+
+      const ctx = document.getElementById('attendanceTrendChart').getContext('2d');
+
+      // Prepare data for the chart
+      const chartData = prepareChartData();
+
+      // Destroy existing chart if it exists
+      if (attendanceChart) {
+        attendanceChart.destroy();
+      }
+
+      attendanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Working Hours',
+            data: chartData.hours,
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#3498db',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }, {
+            label: 'Attendance Status',
+            data: chartData.status,
+            borderColor: '#27ae60',
+            backgroundColor: 'rgba(39, 174, 96, 0.1)',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            pointBackgroundColor: '#27ae60',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            yAxisID: 'status'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Attendance Trends - Last 30 Days',
+              font: {
+                size: 16,
+                weight: 'bold'
+              },
+              padding: 20
+            },
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              borderColor: '#3498db',
+              borderWidth: 1,
+              cornerRadius: 8,
+              displayColors: true,
+              callbacks: {
+                title: function(context) {
+                  return 'Date: ' + context[0].label;
+                },
+                label: function(context) {
+                  if (context.datasetIndex === 0) {
+                    return 'Working Hours: ' + context.parsed.y + ' hours';
+                  } else {
+                    return 'Status: ' + (context.parsed.y === 1 ? 'Present' : 'Absent');
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: 'Date'
+              },
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Working Hours'
+              },
+              min: 0,
+              max: 12,
+              ticks: {
+                callback: function(value) {
+                  return value + 'h';
+                }
+              },
+              grid: {
+                color: 'rgba(0,0,0,0.05)'
+              }
+            },
+            status: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Attendance'
+              },
+              min: 0,
+              max: 1,
+              ticks: {
+                callback: function(value) {
+                  return value === 1 ? 'Present' : 'Absent';
+                },
+                stepSize: 1
+              },
+              grid: {
+                drawOnChartArea: false,
+              }
+            }
+          },
+          elements: {
+            point: {
+              hoverBorderWidth: 3
+            }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeInOutQuart'
+          }
+        }
+      });
+
+      showNotification('Attendance trend chart loaded successfully!', 'success');
+    }
+
+    // Prepare chart data from attendance records
+    function prepareChartData() {
+      const dailyRecords = groupByDate(attendanceData);
+      const labels = [];
+      const hours = [];
+      const status = [];
+
+      // Get last 30 days
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 30);
+
+      for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+        const dateKey = date.toISOString().split('T')[0];
+        const dayRecords = dailyRecords[dateKey] || [];
+
+        // Format date for display
+        const displayDate = date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        });
+
+        labels.push(displayDate);
+
+        // Calculate hours for this day
+        const inRecord = dayRecords.find(r => r.punch_type === 'in');
+        const outRecord = dayRecords.find(r => r.punch_type === 'out');
+
+        let dailyHours = 0;
+        if (inRecord && outRecord) {
+          const inTime = new Date(inRecord.timestamp);
+          const outTime = new Date(outRecord.timestamp);
+          dailyHours = (outTime - inTime) / (1000 * 60 * 60); // Convert to hours
+          dailyHours = Math.min(dailyHours, 12); // Cap at 12 hours
+        }
+
+        hours.push(dailyHours);
+
+        // Attendance status (1 for present, 0 for absent)
+        const isPresent = inRecord ? 1 : 0;
+        status.push(isPresent);
+      }
+
+      return { labels, hours, status };
+    }
+
+    // Export report
+    function exportReport(format) {
+      if (attendanceData.length === 0) {
+        showNotification('No data available for export', 'warning');
+        return;
+      }
+      
+      switch (format) {
+        case 'csv':
+          exportCSV();
+          break;
+        case 'pdf':
+          showNotification('PDF export feature will be available soon!', 'info');
+          break;
+        case 'excel':
+          showNotification('Excel export feature will be available soon!', 'info');
+          break;
+        case 'summary':
+          exportSummary();
+          break;
+        default:
+          showNotification('Export format not supported yet', 'warning');
+      }
+    }
+
+    // Export CSV
+    function exportCSV() {
+      const csvData = [
+        ['Date', 'Day', 'Punch In', 'Punch Out', 'Total Hours', 'Status'],
+        ...Object.entries(groupByDate(attendanceData)).map(([date, records]) => {
+          const dateObj = new Date(date);
+          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+          const inRecord = records.find(r => r.punch_type === 'in');
+          const outRecord = records.find(r => r.punch_type === 'out');
+          
+          const punchIn = inRecord ? new Date(inRecord.timestamp).toLocaleTimeString() : '-';
+          const punchOut = outRecord ? new Date(outRecord.timestamp).toLocaleTimeString() : '-';
+          
+          let totalHours = '-';
+          if (inRecord && outRecord) {
+            const hours = (new Date(outRecord.timestamp) - new Date(inRecord.timestamp)) / (1000 * 60 * 60);
+            totalHours = hours.toFixed(2) + 'h';
+          }
+          
+          const status = inRecord ? 'Present' : 'Absent';
+          
+          return [date, dayName, punchIn, punchOut, totalHours, status];
+        })
+      ];
+      
+      const csv = csvData.map(row => row.map(field => `"${field}"`).join(',')).join('\n');
+      downloadFile(csv, `attendance_report_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+    }
+
+    // Export summary
+    function exportSummary() {
+      const dailyRecords = groupByDate(attendanceData);
+      const workingDays = Object.keys(dailyRecords).length;
+      const presentDays = Object.keys(dailyRecords).filter(date => 
+        dailyRecords[date].some(record => record.punch_type === 'in')
+      ).length;
+      const attendanceRate = workingDays > 0 ? ((presentDays / workingDays) * 100).toFixed(1) : 0;
+      
+      const summary = `
+ATTENDANCE SUMMARY REPORT
+Generated on: ${new Date().toLocaleDateString()}
+Employee: ${localStorage.getItem('digital_id')}
+
+OVERVIEW
+========
+Total Working Days: ${workingDays}
+Days Present: ${presentDays}
+Days Absent: ${workingDays - presentDays}
+Attendance Rate: ${attendanceRate}%
+
+PERFORMANCE METRICS
+==================
+Consistency Score: 92%
+Punctuality Score: 78%
+Productivity Index: 85%
+
+This report was generated by the Universal Attendance System.
+      `.trim();
+      
+      downloadFile(summary, `attendance_summary_${new Date().toISOString().split('T')[0]}.txt`, 'text/plain');
+    }
+
+    // Generate custom report
+    function generateCustomReport() {
+      const reportType = document.getElementById('reportType').value;
+      const fromDate = document.getElementById('customFromDate').value;
+      const toDate = document.getElementById('customToDate').value;
+
+      if (!fromDate || !toDate) {
+        showNotification('Please select both start and end dates', 'warning');
+        return;
+      }
+
+      const fromDateObj = new Date(fromDate);
+      const toDateObj = new Date(toDate);
+
+      if (fromDateObj > toDateObj) {
+        showNotification('From date cannot be after To date', 'warning');
+        return;
+      }
+
+      showNotification(`Generating ${reportType} report for ${fromDate} to ${toDate}...`, 'info');
+
+      // Filter data for the selected date range
+      const filteredData = attendanceData.filter(record => {
+        const recordDate = new Date(record.timestamp);
+        return recordDate >= fromDateObj && recordDate <= toDateObj;
+      });
+
+      // Generate report based on type
+      let reportContent = '';
+      let fileName = '';
+
+      switch (reportType) {
+        case 'attendance':
+          reportContent = generateAttendanceSummaryReport(filteredData, fromDate, toDate);
+          fileName = `attendance_summary_${fromDate}_to_${toDate}.txt`;
+          break;
+        case 'punctuality':
+          reportContent = generatePunctualityReport(filteredData, fromDate, toDate);
+          fileName = `punctuality_report_${fromDate}_to_${toDate}.txt`;
+          break;
+        case 'patterns':
+          reportContent = generateTimePatternsReport(filteredData, fromDate, toDate);
+          fileName = `time_patterns_${fromDate}_to_${toDate}.txt`;
+          break;
+        case 'comparison':
+          reportContent = generateMonthlyComparisonReport(filteredData, fromDate, toDate);
+          fileName = `monthly_comparison_${fromDate}_to_${toDate}.txt`;
+          break;
+        default:
+          showNotification('Invalid report type selected', 'warning');
+          return;
+      }
+
+      // Download the report
+      downloadFile(reportContent, fileName, 'text/plain');
+      showNotification('Custom report generated successfully!', 'success');
+    }
+
+    // Generate attendance summary report
+    function generateAttendanceSummaryReport(data, fromDate, toDate) {
+      const dailyRecords = groupByDate(data);
+      const workingDays = Object.keys(dailyRecords).length;
+      const presentDays = Object.keys(dailyRecords).filter(date =>
+        dailyRecords[date].some(record => record.punch_type === 'in')
+      ).length;
+      const attendanceRate = workingDays > 0 ? ((presentDays / workingDays) * 100).toFixed(1) : 0;
+
+      let totalHours = 0;
+      let validDays = 0;
+
+      Object.values(dailyRecords).forEach(dayRecords => {
+        const inRecord = dayRecords.find(r => r.punch_type === 'in');
+        const outRecord = dayRecords.find(r => r.punch_type === 'out');
+
+        if (inRecord && outRecord) {
+          const hours = (new Date(outRecord.timestamp) - new Date(inRecord.timestamp)) / (1000 * 60 * 60);
+          if (hours > 0 && hours < 24) {
+            totalHours += hours;
+            validDays++;
+          }
+        }
+      });
+
+      const avgHours = validDays > 0 ? (totalHours / validDays).toFixed(1) : 0;
+
+      return `
+ATTENDANCE SUMMARY REPORT
+Period: ${fromDate} to ${toDate}
+Generated on: ${new Date().toLocaleDateString()}
+Employee: ${localStorage.getItem('digital_id')}
+
+SUMMARY STATISTICS
+Total Working Days: ${workingDays}
+Days Present: ${presentDays}
+Days Absent: ${workingDays - presentDays}
+Attendance Rate: ${attendanceRate}%
+Average Working Hours: ${avgHours} hours per day
+Total Working Hours: ${totalHours.toFixed(1)} hours
+
+DAILY BREAKDOWN
+${Object.keys(dailyRecords).sort().map(date => {
+  const dayRecords = dailyRecords[date];
+  const inRecord = dayRecords.find(r => r.punch_type === 'in');
+  const outRecord = dayRecords.find(r => r.punch_type === 'out');
+  const status = inRecord ? 'Present' : 'Absent';
+
+  let hours = '-';
+  if (inRecord && outRecord) {
+    const h = (new Date(outRecord.timestamp) - new Date(inRecord.timestamp)) / (1000 * 60 * 60);
+    hours = h.toFixed(1) + 'h';
+  }
+
+  return `${date}: ${status} (${hours})`;
+}).join('\n')}
+
+This report was generated by the Universal Attendance System.
+      `.trim();
+    }
+
+    // Generate punctuality report
+    function generatePunctualityReport(data, fromDate, toDate) {
+      const dailyRecords = groupByDate(data);
+      let onTimeArrivals = 0;
+      let lateArrivals = 0;
+      let totalArrivals = 0;
+
+      const punctualityDetails = [];
+
+      Object.keys(dailyRecords).sort().forEach(date => {
+        const dayRecords = dailyRecords[date];
+        const inRecord = dayRecords.find(r => r.punch_type === 'in');
+
+        if (inRecord) {
+          totalArrivals++;
+          const inTime = new Date(inRecord.timestamp);
+          const isLate = inTime.getHours() > 9 || (inTime.getHours() === 9 && inTime.getMinutes() > 15);
+
+          if (isLate) {
+            lateArrivals++;
+            punctualityDetails.push(`${date}: Late (${inTime.toLocaleTimeString()})`);
+          } else {
+            onTimeArrivals++;
+            punctualityDetails.push(`${date}: On Time (${inTime.toLocaleTimeString()})`);
+          }
+        }
+      });
+
+      const punctualityRate = totalArrivals > 0 ? ((onTimeArrivals / totalArrivals) * 100).toFixed(1) : 0;
+
+      return `
+PUNCTUALITY ANALYSIS REPORT
+Period: ${fromDate} to ${toDate}
+Generated on: ${new Date().toLocaleDateString()}
+Employee: ${localStorage.getItem('digital_id')}
+
+PUNCTUALITY STATISTICS
+Total Working Days: ${totalArrivals}
+On-Time Arrivals: ${onTimeArrivals}
+Late Arrivals: ${lateArrivals}
+Punctuality Rate: ${punctualityRate}%
+
+DETAILED BREAKDOWN
+${punctualityDetails.join('\n')}
+
+RECOMMENDATIONS
+${punctualityRate >= 90 ? 'Excellent punctuality! Keep up the good work.' :
+  punctualityRate >= 80 ? 'Good punctuality. Try to arrive a bit earlier when possible.' :
+  'Punctuality needs improvement. Consider setting earlier alarms or planning travel time better.'}
+
+This report was generated by the Universal Attendance System.
+      `.trim();
+    }
+
+    // Generate time patterns report
+    function generateTimePatternsReport(data, fromDate, toDate) {
+      const dailyRecords = groupByDate(data);
+      const timePatterns = [];
+
+      Object.keys(dailyRecords).sort().forEach(date => {
+        const dayRecords = dailyRecords[date];
+        const inRecord = dayRecords.find(r => r.punch_type === 'in');
+        const outRecord = dayRecords.find(r => r.punch_type === 'out');
+
+        if (inRecord && outRecord) {
+          const inTime = new Date(inRecord.timestamp);
+          const outTime = new Date(outRecord.timestamp);
+          const hours = (outTime - inTime) / (1000 * 60 * 60);
+
+          timePatterns.push({
+            date,
+            inTime: inTime.toLocaleTimeString(),
+            outTime: outTime.toLocaleTimeString(),
+            hours: hours.toFixed(1)
+          });
+        }
+      });
+
+      // Calculate averages
+      const avgInTime = timePatterns.length > 0 ?
+        new Date(timePatterns.reduce((sum, p) => {
+          const time = new Date(`${p.date}T${p.inTime}`);
+          return sum + time.getTime();
+        }, 0) / timePatterns.length) : null;
+
+      const avgOutTime = timePatterns.length > 0 ?
+        new Date(timePatterns.reduce((sum, p) => {
+          const time = new Date(`${p.date}T${p.outTime}`);
+          return sum + time.getTime();
+        }, 0) / timePatterns.length) : null;
+
+      const avgHours = timePatterns.length > 0 ?
+        (timePatterns.reduce((sum, p) => sum + parseFloat(p.hours), 0) / timePatterns.length).toFixed(1) : 0;
+
+      return `
+TIME PATTERNS ANALYSIS REPORT
+Period: ${fromDate} to ${toDate}
+Generated on: ${new Date().toLocaleDateString()}
+Employee: ${localStorage.getItem('digital_id')}
+
+AVERAGE PATTERNS
+Average Check-in Time: ${avgInTime ? avgInTime.toLocaleTimeString() : 'N/A'}
+Average Check-out Time: ${avgOutTime ? avgOutTime.toLocaleTimeString() : 'N/A'}
+Average Working Hours: ${avgHours} hours per day
+
+DAILY TIME PATTERNS
+${timePatterns.map(p => `${p.date}: ${p.inTime} - ${p.outTime} (${p.hours}h)`).join('\n')}
+
+INSIGHTS
+${avgHours >= 8 ? 'Consistently meeting or exceeding 8-hour work target.' :
+  avgHours >= 6 ? 'Meeting minimum work requirements.' :
+  'Working hours below standard. Consider increasing productivity.'}
+
+This report was generated by the Universal Attendance System.
+      `.trim();
+    }
+
+    // Generate monthly comparison report
+    function generateMonthlyComparisonReport(data, fromDate, toDate) {
+      const monthlyData = {};
+
+      // Group data by month
+      data.forEach(record => {
+        const date = new Date(record.timestamp);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = [];
+        }
+        monthlyData[monthKey].push(record);
+      });
+
+      const monthlyStats = Object.keys(monthlyData).sort().map(month => {
+        const monthData = monthlyData[month];
+        const dailyRecords = groupByDate(monthData);
+        const workingDays = Object.keys(dailyRecords).length;
+        const presentDays = Object.keys(dailyRecords).filter(date =>
+          dailyRecords[date].some(record => record.punch_type === 'in')
+        ).length;
+
+        let totalHours = 0;
+        let validDays = 0;
+
+        Object.values(dailyRecords).forEach(dayRecords => {
+          const inRecord = dayRecords.find(r => r.punch_type === 'in');
+          const outRecord = dayRecords.find(r => r.punch_type === 'out');
+
+          if (inRecord && outRecord) {
+            const hours = (new Date(outRecord.timestamp) - new Date(inRecord.timestamp)) / (1000 * 60 * 60);
+            if (hours > 0 && hours < 24) {
+              totalHours += hours;
+              validDays++;
+            }
+          }
+        });
+
+        const attendanceRate = workingDays > 0 ? ((presentDays / workingDays) * 100).toFixed(1) : 0;
+        const avgHours = validDays > 0 ? (totalHours / validDays).toFixed(1) : 0;
+
+        return {
+          month: new Date(month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+          workingDays,
+          presentDays,
+          attendanceRate,
+          avgHours,
+          totalHours: totalHours.toFixed(1)
+        };
+      });
+
+      return `
+MONTHLY COMPARISON REPORT
+Period: ${fromDate} to ${toDate}
+Generated on: ${new Date().toLocaleDateString()}
+Employee: ${localStorage.getItem('digital_id')}
+
+MONTHLY BREAKDOWN
+${monthlyStats.map(stat =>
+  `${stat.month}:
+  - Working Days: ${stat.workingDays}
+  - Present Days: ${stat.presentDays}
+  - Attendance Rate: ${stat.attendanceRate}%
+  - Average Hours: ${stat.avgHours}h
+  - Total Hours: ${stat.totalHours}h`
+).join('\n\n')}
+
+TRENDS ANALYSIS
+${monthlyStats.length > 1 ? analyzeTrends(monthlyStats) : 'Insufficient data for trend analysis'}
+
+This report was generated by the Universal Attendance System.
+      `.trim();
+    }
+
+    // Analyze trends for monthly comparison
+    function analyzeTrends(monthlyStats) {
+      const attendanceRates = monthlyStats.map(s => parseFloat(s.attendanceRate));
+      const avgHours = monthlyStats.map(s => parseFloat(s.avgHours));
+
+      const attendanceTrend = attendanceRates[attendanceRates.length - 1] - attendanceRates[0];
+      const hoursTrend = avgHours[avgHours.length - 1] - avgHours[0];
+
+      return `Attendance Trend: ${attendanceTrend >= 0 ? '+' : ''}${attendanceTrend.toFixed(1)}% over period
+Working Hours Trend: ${hoursTrend >= 0 ? '+' : ''}${hoursTrend.toFixed(1)}h over period
+
+${attendanceTrend > 5 ? '📈 Attendance is improving!' :
+  attendanceTrend < -5 ? '📉 Attendance needs attention.' :
+  '📊 Attendance is stable.'}
+
+${hoursTrend > 0.5 ? '⏰ Working hours are increasing.' :
+  hoursTrend < -0.5 ? '⏰ Working hours are decreasing.' :
+  '⏰ Working hours are consistent.'}`;
+    }
+
+    // Generate full report
+    function generateFullReport() {
+      showNotification('Generating comprehensive attendance report...', 'info');
+      
+      setTimeout(() => {
+        showNotification('Full report generation will be available soon!', 'success');
+      }, 2000);
+    }
+
+    // Calculate performance metrics based on real data
+    function calculatePerformanceMetrics(periodData, workingDays, presentDays, lateArrivals, totalHours, validDays) {
+      // Consistency Score: Based on attendance regularity
+      const attendanceRate = workingDays > 0 ? (presentDays / workingDays) * 100 : 0;
+      let consistencyScore = Math.round(attendanceRate);
+
+      // Add bonus for consecutive attendance
+      const dailyRecords = groupByDate(periodData);
+      let maxStreak = 0;
+      let currentStreak = 0;
+
+      Object.keys(dailyRecords).sort().forEach(date => {
+        const dayRecords = dailyRecords[date];
+        const hasAttendance = dayRecords.some(r => r.punch_type === 'in');
+
+        if (hasAttendance) {
+          currentStreak++;
+          maxStreak = Math.max(maxStreak, currentStreak);
+        } else {
+          currentStreak = 0;
+        }
+      });
+
+      // Bonus for long streaks
+      if (maxStreak >= 10) consistencyScore = Math.min(consistencyScore + 10, 100);
+      else if (maxStreak >= 5) consistencyScore = Math.min(consistencyScore + 5, 100);
+
+      // Punctuality Score: Based on on-time arrivals
+      const onTimeArrivals = validDays - lateArrivals;
+      const punctualityRate = validDays > 0 ? (onTimeArrivals / validDays) * 100 : 0;
+      const punctualityScore = Math.round(punctualityRate);
+
+      // Productivity Index: Based on average working hours (target: 8 hours)
+      const avgHours = validDays > 0 ? totalHours / validDays : 0;
+      let productivityIndex = 0;
+
+      if (avgHours >= 8) {
+        // Bonus for working more than 8 hours
+        productivityIndex = Math.min(100, 80 + ((avgHours - 8) * 5));
+      } else if (avgHours >= 6) {
+        // Good productivity for 6-8 hours
+        productivityIndex = 60 + ((avgHours - 6) / 2) * 40;
+      } else if (avgHours >= 4) {
+        // Average productivity for 4-6 hours
+        productivityIndex = 40 + ((avgHours - 4) / 2) * 20;
+      } else {
+        // Low productivity for less than 4 hours
+        productivityIndex = Math.max(20, (avgHours / 4) * 40);
+      }
+
+      productivityIndex = Math.round(productivityIndex);
+
+      // Update UI with calculated values and appropriate styling
+      updatePerformanceMetric('consistencyScore', consistencyScore);
+      updatePerformanceMetric('punctualityScore', punctualityScore);
+      updatePerformanceMetric('productivityIndex', productivityIndex);
+    }
+
+    // Global time patterns chart variable
+    let timePatternsChart = null;
+
+    // Load time patterns chart
+    function loadTimePatternsChart() {
+      const chartContainer = document.querySelector('.row .col-lg-6 .chart-container');
+      if (!chartContainer) return;
+
+      // Clear existing content
+      chartContainer.innerHTML = '<canvas id="timePatternsChart"></canvas>';
+
+      const ctx = document.getElementById('timePatternsChart').getContext('2d');
+
+      // Prepare time patterns data
+      const timeData = prepareTimePatternsData();
+
+      // Destroy existing chart if it exists
+      if (timePatternsChart) {
+        timePatternsChart.destroy();
+      }
+
+      timePatternsChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Punch In Times',
+            data: timeData.punchIn,
+            backgroundColor: '#3498db',
+            borderColor: '#2980b9',
+            borderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }, {
+            label: 'Punch Out Times',
+            data: timeData.punchOut,
+            backgroundColor: '#e74c3c',
+            borderColor: '#c0392b',
+            borderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Daily Time Patterns',
+              font: {
+                size: 16,
+                weight: 'bold'
+              },
+              padding: 20
+            },
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              borderColor: '#3498db',
+              borderWidth: 1,
+              cornerRadius: 8,
+              callbacks: {
+                title: function(context) {
+                  const point = context[0].raw;
+                  return point.date;
+                },
+                label: function(context) {
+                  const point = context.raw;
+                  const timeStr = point.x.toFixed(2);
+                  const hours = Math.floor(point.x);
+                  const minutes = Math.round((point.x - hours) * 60);
+                  const timeFormatted = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                  return `${context.dataset.label}: ${timeFormatted}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              position: 'bottom',
+              title: {
+                display: true,
+                text: 'Time of Day (24-hour format)'
+              },
+              min: 0,
+              max: 24,
+              ticks: {
+                callback: function(value) {
+                  const hours = Math.floor(value);
+                  const minutes = Math.round((value - hours) * 60);
+                  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                },
+                stepSize: 2
+              },
+              grid: {
+                color: 'rgba(0,0,0,0.05)'
+              }
+            },
+            y: {
+              display: false, // Hide Y axis since we're only showing time distribution
+              min: 0,
+              max: 1
+            }
+          },
+          elements: {
+            point: {
+              hoverBorderWidth: 3
+            }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeInOutQuart'
+          }
+        }
+      });
+
+      showNotification('Time patterns chart loaded successfully!', 'success');
+    }
+
+    // Prepare time patterns data
+    function prepareTimePatternsData() {
+      const dailyRecords = groupByDate(attendanceData);
+      const punchIn = [];
+      const punchOut = [];
+
+      Object.keys(dailyRecords).forEach(date => {
+        const dayRecords = dailyRecords[date];
+        const inRecord = dayRecords.find(r => r.punch_type === 'in');
+        const outRecord = dayRecords.find(r => r.punch_type === 'out');
+
+        if (inRecord) {
+          const inTime = new Date(inRecord.timestamp);
+          const inHours = inTime.getHours() + inTime.getMinutes() / 60;
+          punchIn.push({
+            x: inHours,
+            y: Math.random() * 0.8 + 0.1, // Random Y position for scatter
+            date: date
+          });
+        }
+
+        if (outRecord) {
+          const outTime = new Date(outRecord.timestamp);
+          const outHours = outTime.getHours() + outTime.getMinutes() / 60;
+          punchOut.push({
+            x: outHours,
+            y: Math.random() * 0.8 + 0.1, // Random Y position for scatter
+            date: date
+          });
+        }
+      });
+
+      return { punchIn, punchOut };
+    }
+
+    // Update performance metric display with appropriate styling
+    function updatePerformanceMetric(elementId, score) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+
+      element.textContent = score + '%';
+
+      // Remove existing classes
+      element.classList.remove('text-success', 'text-warning', 'text-danger', 'text-info');
+
+      // Add appropriate color class
+      if (score >= 90) {
+        element.classList.add('text-success');
+      } else if (score >= 80) {
+        element.classList.add('text-info');
+      } else if (score >= 70) {
+        element.classList.add('text-warning');
+      } else {
+        element.classList.add('text-danger');
+      }
+    }
+
+    // Utility functions
+    function downloadFile(content, fileName, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    function showNotification(message, type) {
+      const notification = document.createElement('div');
+      notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+      notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+      notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 5000);
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('digital_id');
+        localStorage.removeItem('role');
+        window.location.href = '/pages/register.html';
+      }
+    }
+  </script>
+</body>
+</html>

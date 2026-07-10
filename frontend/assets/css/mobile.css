@@ -1,0 +1,543 @@
+/* Mobile Responsive Styles for Universal Attendance System */
+
+/* Mobile First Approach */
+@media screen and (max-width: 768px) {
+  
+  /* Base Layout */
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .container {
+    padding: 0 15px;
+  }
+  
+  /* Navigation */
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+  
+  .navbar-brand {
+    font-size: 1.2rem;
+  }
+  
+  .navbar-nav {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin-top: 10px;
+    padding: 10px;
+  }
+  
+  /* Sidebar Mobile */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 280px;
+    height: 100vh;
+    transition: left 0.3s ease;
+    z-index: 1050;
+  }
+  
+  .sidebar.show {
+    left: 0;
+  }
+  
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1040;
+    display: none;
+  }
+  
+  .sidebar-overlay.show {
+    display: block;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+  
+  /* Mobile Menu Toggle */
+  .mobile-menu-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1060;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+  
+  /* Cards */
+  .card {
+    margin-bottom: 1rem;
+    border-radius: 10px;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .card-header {
+    padding: 0.75rem 1rem;
+    font-size: 1.1rem;
+  }
+  
+  /* Forms */
+  .form-control,
+  .form-select {
+    padding: 10px 12px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    border-radius: 8px;
+  }
+  
+  .form-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  
+  .input-group {
+    flex-wrap: nowrap;
+  }
+  
+  .input-group-text {
+    padding: 10px 12px;
+  }
+  
+  /* Buttons */
+  .btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    width: auto;
+    margin-bottom: 5px;
+  }
+  
+  .btn-group-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .btn-group-mobile .btn {
+    margin-bottom: 0;
+  }
+  
+  /* Tables */
+  .table-responsive {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .table {
+    font-size: 0.8rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 8px;
+  }
+  
+  .table th {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+  
+  /* Mobile Table - Stack Layout */
+  .table-mobile {
+    border: 0;
+  }
+  
+  .table-mobile thead {
+    display: none;
+  }
+  
+  .table-mobile tr {
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: block;
+  }
+  
+  .table-mobile td {
+    border: none;
+    display: block;
+    text-align: right;
+    padding: 5px 0;
+    border-bottom: 1px solid #f8f9fa;
+  }
+  
+  .table-mobile td:before {
+    content: attr(data-label) ": ";
+    float: left;
+    font-weight: bold;
+    color: var(--primary-color);
+  }
+  
+  .table-mobile td:last-child {
+    border-bottom: 0;
+  }
+  
+  /* Modals */
+  .modal-dialog {
+    margin: 10px;
+    max-width: calc(100% - 20px);
+  }
+  
+  .modal-content {
+    border-radius: 15px;
+  }
+  
+  .modal-header,
+  .modal-footer {
+    padding: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  /* Stats Cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1.5rem;
+    text-align: center;
+  }
+  
+  .stat-number {
+    font-size: 2rem;
+  }
+  
+  /* Punch Buttons */
+  .punch-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 1rem;
+  }
+  
+  .punch-btn {
+    width: 100%;
+    height: 80px;
+    font-size: 1.2rem;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .punch-in {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+  }
+  
+  .punch-out {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+  }
+  
+  /* QR Scanner */
+  .qr-scanner {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  
+  .qr-scanner video {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+  
+  /* Industry Selection */
+  .industry-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .industry-card {
+    padding: 1rem;
+    text-align: center;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+  }
+  
+  .industry-card i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .industry-card h6 {
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+  }
+  
+  .industry-card small {
+    font-size: 0.7rem;
+  }
+  
+  /* Alerts */
+  .alert {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+  }
+  
+  /* Action Buttons */
+  .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .action-btn {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.8rem;
+    border-radius: 5px;
+  }
+  
+  /* Filters */
+  .filters-mobile {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  /* Footer */
+  .footer {
+    padding: 2rem 1rem 1rem;
+  }
+  
+  .footer .row {
+    text-align: center;
+  }
+  
+  .footer .col-md-2,
+  .footer .col-md-4 {
+    margin-bottom: 2rem;
+  }
+  
+  /* Typography */
+  .display-4 {
+    font-size: 2rem;
+  }
+  
+  .display-5 {
+    font-size: 1.75rem;
+  }
+  
+  .display-6 {
+    font-size: 1.5rem;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  h3 {
+    font-size: 1.3rem;
+  }
+  
+  /* Spacing */
+  .py-5 {
+    padding: 2rem 0;
+  }
+  
+  .my-5 {
+    margin: 2rem 0;
+  }
+  
+  .mb-4 {
+    margin-bottom: 1.5rem;
+  }
+  
+  .mb-5 {
+    margin-bottom: 2rem;
+  }
+  
+  /* Touch Friendly */
+  .btn,
+  .nav-link,
+  .card,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* iOS Specific */
+  input[type="date"],
+  input[type="time"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="text"],
+  select,
+  textarea {
+    -webkit-appearance: none;
+    -webkit-border-radius: 8px;
+  }
+  
+  /* Scroll Improvements */
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet Styles */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 250px;
+  }
+  
+  .main-content {
+    margin-left: 250px;
+    padding: 1.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .industry-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Small Mobile Devices */
+@media screen and (max-width: 480px) {
+  .industry-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-dialog {
+    margin: 5px;
+    max-width: calc(100% - 10px);
+  }
+  
+  .btn-group-mobile {
+    gap: 8px;
+  }
+  
+  .punch-btn {
+    height: 70px;
+    font-size: 1rem;
+  }
+  
+  .stat-number {
+    font-size: 1.75rem;
+  }
+}
+
+/* Landscape Phone */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .modal-dialog {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .sidebar {
+    width: 200px;
+  }
+  
+  .punch-container {
+    flex-direction: row;
+  }
+  
+  .punch-btn {
+    height: 60px;
+  }
+}
+
+/* High DPI Displays */
+@media screen and (-webkit-min-device-pixel-ratio: 2) {
+  .btn,
+  .card,
+  .form-control {
+    border-width: 0.5px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print Styles for Mobile */
+@media print {
+  .mobile-menu-toggle,
+  .sidebar,
+  .btn {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .table-mobile thead {
+    display: table-header-group !important;
+  }
+  
+  .table-mobile tr {
+    display: table-row !important;
+  }
+  
+  .table-mobile td {
+    display: table-cell !important;
+  }
+}

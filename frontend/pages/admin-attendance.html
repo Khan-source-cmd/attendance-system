@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Admin Attendance Monitoring - Universal Attendance System">
+    <meta name="author" content="Universal Attendance System">
+    <title>Attendance Monitoring | Universal Attendance System</title>
+
+    <!-- External CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            --success-gradient: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            --danger-gradient: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            --warning-gradient: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            --info-gradient: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            --sidebar-width: 280px;
+            --border-radius: 15px;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--primary-gradient);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Layout Components */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
+            z-index: 1050;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1049;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            color: #2c3e50;
+            text-decoration: none;
+            font-size: 1.25rem;
+        }
+
+        .sidebar-brand i {
+            margin-right: 0.75rem;
+            color: #3498db;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .sidebar-nav .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-nav .nav-link {
+            display: flex;
+            align-items: center;
+            color: #2c3e50;
+            font-weight: 500;
+            padding: 0.875rem 1.5rem;
+            border-radius: 0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar-nav .nav-link:hover {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+            transform: translateX(8px);
+        }
+
+        .sidebar-nav .nav-link.active {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.15);
+            border-right: 4px solid #3498db;
+            font-weight: 600;
+        }
+
+        .sidebar-nav .nav-link i {
+            margin-right: 0.875rem;
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .content-wrapper {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Section */
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .welcome-card {
+            background: var(--secondary-gradient);
+            color: white;
+            border-radius: var(--border-radius);
+            padding: 2.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: rotate(45deg);
+        }
+
+        .welcome-card .card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border-left: 4px solid #3498db;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-card .card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            opacity: 0.8;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        /* Content Cards */
+        .content-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .card-header-custom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* Filters and Controls */
+        .filters-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        /* Attendance Monitor */
+        .attendance-monitor {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .attendance-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.2s ease;
+        }
+
+        .attendance-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .attendance-item:last-child {
+            border-bottom: none;
+        }
+
+        .attendance-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            color: white;
+            font-weight: 600;
+        }
+
+        .attendance-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .attendance-user {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .attendance-details {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .attendance-time {
+            color: #3498db;
+            font-weight: 500;
+        }
+
+        .attendance-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .punch-in { background: var(--success-gradient); color: white; }
+        .punch-out { background: var(--danger-gradient); color: white; }
+        .break-start { background: var(--warning-gradient); color: white; }
+        .break-end { background: var(--info-gradient); color: white; }
+
+        /* Tables */
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: var(--secondary-gradient);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 1rem;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            border-bottom: 1px solid #ecf0f1;
+            vertical-align: middle;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        /* Buttons */
+        .btn {
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--secondary-gradient);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                justify-content: space-between;
+            }
+        }
+
+        @media (max-width: 992px) {
+            :root {
+                --sidebar-width: 280px;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .content-wrapper {
+                padding: 1.5rem;
+            }
+
+            .welcome-card {
+                padding: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                padding: 1rem;
+            }
+
+            .welcome-card {
+                padding: 1.5rem;
+            }
+
+            .card-header-custom {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .filter-row {
+                gap: 0.5rem;
+            }
+
+            .attendance-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
+
+            .attendance-avatar {
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .content-wrapper {
+                padding: 0.75rem;
+            }
+
+            .welcome-card {
+                padding: 1.25rem;
+            }
+
+            .stat-card {
+                padding: 1.5rem;
+            }
+
+            .stat-number {
+                font-size: 2rem;
+            }
+
+            .content-card {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* Pulse animation for live updates */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Status indicators */
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        .status-online { background: #27ae60; }
+        .status-offline { background: #95a5a6; }
+        .status-away { background: #f39c12; }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle d-md-none position-fixed" onclick="toggleSidebar()" aria-label="Toggle navigation" style="top: 15px; left: 15px; z-index: 1041; background: rgba(255, 255, 255, 0.9); border: 2px solid #3498db; color: #3498db; width: 45px; height: 45px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay d-md-none" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <a href="/pages/admin-dashboard.html" class="sidebar-brand">
+                <i class="fas fa-calendar-check"></i>
+                Universal Attendance
+            </a>
+        </div>
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/admin-dashboard.html">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="/pages/admin-attendance.html">
+                    <i class="fas fa-eye"></i>
+                    Attendance Monitor
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/history.html">
+                    <i class="fas fa-history"></i>
+                    History
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/profile.html">
+                    <i class="fas fa-user"></i>
+                    Profile
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/settings.html">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/faculty-classes.html">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    Faculty Classes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/reports.html">
+                    <i class="fas fa-chart-bar"></i>
+                    Reports
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/pages/integrations.html">
+                    <i class="fas fa-plug"></i>
+                    Integrations
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="content-wrapper">
+            <!-- Welcome Card -->
+            <div class="welcome-card page-header">
+                <div class="card-content">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8">
+                            <div class="user-info">
+                                <h1><i class="fas fa-eye me-3"></i>Attendance Monitoring</h1>
+                                <div class="user-meta">
+                                    <i class="fas fa-clock me-2"></i>Real-time attendance tracking and analytics
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="text-end">
+                                <div class="current-time" id="currentTime">--:--</div>
+                                <div class="current-date" id="currentDate">Loading...</div>
+                                <div class="small opacity-75 mt-2">
+                                    <span class="status-indicator status-online"></span>Live Monitoring Active
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="card-content">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-number" id="todayPunches">-</div>
+                                <div class="stat-label">Today's Punches</div>
+                            </div>
+                            <div class="stat-icon" style="background: var(--success-gradient);">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="card-content">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-number" id="activeUsers">-</div>
+                                <div class="stat-label">Active Users</div>
+                            </div>
+                            <div class="stat-icon" style="background: var(--info-gradient);">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="card-content">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-number" id="avgPunches">-</div>
+                                <div class="stat-label">Avg Daily Punches</div>
+                            </div>
+                            <div class="stat-icon" style="background: var(--warning-gradient);">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="card-content">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-number" id="totalUsers">-</div>
+                                <div class="stat-label">Total Users</div>
+                            </div>
+                            <div class="stat-icon" style="background: var(--secondary-gradient);">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="filters-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label">View:</label>
+                        <select id="viewType" class="form-select" onchange="changeView()">
+                            <option value="monitor">Live Monitor</option>
+                            <option value="monthly">Monthly Report</option>
+                            <option value="comparison">Multi-Month Comparison</option>
+                            <option value="user">User Details</option>
+                            <option value="industry">Industry Analytics</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group" id="monthFilter" style="display: none;">
+                        <label class="filter-label">Month:</label>
+                        <select id="reportMonth" class="form-select">
+                            <option value="">Current Month</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group" id="yearFilter" style="display: none;">
+                        <label class="filter-label">Year:</label>
+                        <select id="reportYear" class="form-select">
+                            <option value="">Current Year</option>
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group" id="userFilter" style="display: none;">
+                        <label class="filter-label">User:</label>
+                        <select id="userSelect" class="form-select">
+                            <option value="">All Users</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <button class="btn btn-primary" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Monitor View -->
+            <div id="monitorView" class="content-card">
+                <div class="card-header-custom">
+                    <h3 class="card-title">
+                        <i class="fas fa-broadcast-tower me-2"></i>Live Attendance Monitor
+                    </h3>
+                    <div class="d-flex gap-2">
+                        <select id="monitorHours" class="form-select" onchange="loadLiveMonitor()">
+                            <option value="1">Last Hour</option>
+                            <option value="6">Last 6 Hours</option>
+                            <option value="12">Last 12 Hours</option>
+                            <option value="24" selected>Last 24 Hours</option>
+                            <option value="48">Last 48 Hours</option>
+                        </select>
+                        <button class="btn btn-success" onclick="startLiveUpdates()">
+                            <i class="fas fa-play me-2"></i>Live Updates
+                        </button>
+                    </div>
+                </div>
+
+                <div class="attendance-monitor" id="liveMonitor">
+                    <div class="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading live attendance...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading live attendance data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Report View -->
+            <div id="monthlyView" class="content-card" style="display: none;">
+                <div class="card-header-custom">
+                    <h3 class="card-title">
+                        <i class="fas fa-calendar-alt me-2"></i>Monthly Attendance Report
+                    </h3>
+                    <button class="btn btn-primary" onclick="exportMonthlyReport()">
+                        <i class="fas fa-download me-2"></i>Export Report
+                    </button>
+                </div>
+
+                <div id="monthlyReport">
+                    <div class="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading monthly report...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading monthly attendance report...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Month Comparison View -->
+            <div id="comparisonView" class="content-card" style="display: none;">
+                <div class="card-header-custom">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-bar me-2"></i>Multi-Month Comparison
+                    </h3>
+                    <div class="d-flex gap-2">
+                        <select id="comparisonMonths" class="form-select" onchange="loadComparison()">
+                            <option value="3">Last 3 Months</option>
+                            <option value="6">Last 6 Months</option>
+                            <option value="12">Last 12 Months</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="exportComparison()">
+                            <i class="fas fa-download me-2"></i>Export Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+
+                <div id="comparisonTable" class="mt-4">
+                    <div class="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading comparison data...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading comparison data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Details View -->
+            <div id="userView" class="content-card" style="display: none;">
+                <div class="card-header-custom">
+                    <h3 class="card-title">
+                        <i class="fas fa-user me-2"></i>User Attendance Details
+                    </h3>
+                    <div class="d-flex gap-2">
+                        <select id="userDays" class="form-select" onchange="loadUserDetails()">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="exportUserReport()">
+                            <i class="fas fa-download me-2"></i>Export User Data
+                        </button>
+                    </div>
+                </div>
+
+                <div id="userDetails">
+                    <div class="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading user details...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Select a user to view their attendance details...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Industry Analytics View -->
+            <div id="industryView" class="content-card" style="display: none;">
+                <div class="card-header-custom">
+                    <h3 class="card-title">
+                        <i class="fas fa-industry me-2"></i>Industry Analytics
+                    </h3>
+                    <div class="d-flex gap-2">
+                        <select id="industrySelect" class="form-select" onchange="loadIndustryAnalytics()">
+                            <option value="">All Industries</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="education">Education</option>
+                            <option value="corporate">Corporate</option>
+                            <option value="manufacturing">Manufacturing</option>
+                            <option value="government">Government</option>
+                            <option value="retail">Retail</option>
+                        </select>
+                        <select id="industryDays" class="form-select" onchange="loadIndustryAnalytics()">
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="180">Last 6 Months</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="industryAnalytics">
+                    <div class="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading industry analytics...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading industry analytics...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script>
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:4000' : `http://${window.location.hostname}:4000`;
+
+        // Global variables
+        let liveUpdateInterval = null;
+        let comparisonChart = null;
+        let currentView = 'monitor';
+        let usersList = [];
+
+        // Authentication functions
+        function getAuthToken() {
+            return localStorage.getItem('token') || sessionStorage.getItem('token') ||
+                   localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+        }
+
+        function getUserData() {
+            return {
+                token: getAuthToken(),
+                digitalid: localStorage.getItem('digitalid') || sessionStorage.getItem('digitalid'),
+                role: localStorage.getItem('role') || sessionStorage.getItem('role'),
+                name: localStorage.getItem('name') || sessionStorage.getItem('name'),
+                industrytype: localStorage.getItem('industrytype') || sessionStorage.getItem('industrytype')
+            };
+        }
+
+        // Redirect to login if not authenticated
+        const userData = getUserData();
+        if (!userData.token || !userData.digitalid) {
+            window.location.href = '/pages/register.html';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+
+            // Set current date
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Load initial data
+            loadUsersList();
+            loadDashboardStats();
+            loadLiveMonitor();
+
+            // Set current month/year
+            const now = new Date();
+            document.getElementById('reportMonth').value = now.getMonth() + 1;
+            document.getElementById('reportYear').value = now.getFullYear();
+        });
+
+        // Load users list for filters
+        async function loadUsersList() {
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/users?limit=1000`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    usersList = result.users;
+                    populateUserSelect(result.users);
+                }
+            } catch (error) {
+                console.error('Users list load error:', error);
+            }
+        }
+
+        // Populate user select dropdown
+        function populateUserSelect(users) {
+            const select = document.getElementById('userSelect');
+            select.innerHTML = '<option value="">All Users</option>';
+
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.digital_id;
+                option.textContent = `${user.name} (${user.digital_id})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Load dashboard statistics
+        async function loadDashboardStats() {
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/dashboard-stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    updateDashboardStats(result.stats);
+                }
+            } catch (error) {
+                console.error('Dashboard stats load error:', error);
+            }
+        }
+
+        // Update dashboard statistics display
+        function updateDashboardStats(stats) {
+            document.getElementById('todayPunches').textContent = stats.todayAttendance || 0;
+            document.getElementById('activeUsers').textContent = stats.recentLogins || 0;
+            document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
+
+            // Calculate average punches per user
+            const avgPunches = stats.totalUsers > 0 ? Math.round((stats.totalAttendance || 0) / stats.totalUsers) : 0;
+            document.getElementById('avgPunches').textContent = avgPunches;
+        }
+
+        // Load live attendance monitor
+        async function loadLiveMonitor() {
+            try {
+                const token = getAuthToken();
+                const hours = document.getElementById('monitorHours').value;
+                const response = await fetch(`${API_BASE}/api/admin/attendance-monitor?hours=${hours}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    displayLiveMonitor(result.records, result.summary);
+                }
+            } catch (error) {
+                console.error('Live monitor load error:', error);
+                document.getElementById('liveMonitor').innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p>Failed to load live attendance data</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display live attendance monitor
+        function displayLiveMonitor(records, summary) {
+            const container = document.getElementById('liveMonitor');
+
+            if (!records || records.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-calendar-times fa-2x mb-3"></i>
+                        <p>No attendance records found in the selected time period</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = records.map(record => {
+                const avatarColor = getAvatarColor(record.name);
+                const punchTypeClass = getPunchTypeClass(record.punch_type);
+
+                return `
+                    <div class="attendance-item">
+                        <div class="attendance-avatar" style="background: ${avatarColor}">
+                            ${record.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="attendance-content">
+                            <div class="attendance-user">${record.name}</div>
+                            <div class="attendance-details">
+                                <span class="attendance-type ${punchTypeClass}">${record.punch_type.replace('_', ' ')}</span>
+                                • ${record.role} • ${record.industry_type}
+                                ${record.location_data && record.location_data.qr_location ? ` • ${record.location_data.qr_location}` : ''}
+                            </div>
+                        </div>
+                        <div class="attendance-time">
+                            ${record.time_ago}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Load monthly report
+        async function loadMonthlyReport() {
+            try {
+                const token = getAuthToken();
+                const month = document.getElementById('reportMonth').value;
+                const year = document.getElementById('reportYear').value;
+                const userId = document.getElementById('userSelect').value;
+
+                let url = `${API_BASE}/api/admin/attendance-report`;
+                const params = [];
+                if (month) params.push(`month=${month}`);
+                if (year) params.push(`year=${year}`);
+                if (userId) params.push(`digital_id=${userId}`);
+                if (params.length > 0) url += '?' + params.join('&');
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    displayMonthlyReport(result.report);
+                }
+            } catch (error) {
+                console.error('Monthly report load error:', error);
+                document.getElementById('monthlyReport').innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p>Failed to load monthly report</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display monthly report
+        function displayMonthlyReport(report) {
+            const container = document.getElementById('monthlyReport');
+
+            const html = `
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-primary">${report.total_users}</h4>
+                                <p class="text-muted mb-0">Total Users</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-success">${report.total_records}</h4>
+                                <p class="text-muted mb-0">Total Records</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-info">${report.user_summary.length}</h4>
+                                <p class="text-muted mb-0">Active Users</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-warning">${report.daily_stats.length}</h4>
+                                <p class="text-muted mb-0">Active Days</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Industry</th>
+                                <th>Total Records</th>
+                                <th>Punch In</th>
+                                <th>Punch Out</th>
+                                <th>Break Start</th>
+                                <th>Break End</th>
+                                <th>Attendance Days</th>
+                                <th>Working Hours</th>
+                                <th>Last Punch</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${report.user_summary.map(user => `
+                                <tr>
+                                    <td>
+                                        <strong>${user.name}</strong><br>
+                                        <small class="text-muted">${user.user_id}</small>
+                                    </td>
+                                    <td>${user.role}</td>
+                                    <td>${user.industry}</td>
+                                    <td><span class="badge bg-primary">${user.total_records}</span></td>
+                                    <td><span class="badge bg-success">${user.punch_in_count}</span></td>
+                                    <td><span class="badge bg-danger">${user.punch_out_count}</span></td>
+                                    <td><span class="badge bg-warning">${user.break_start_count}</span></td>
+                                    <td><span class="badge bg-info">${user.break_end_count}</span></td>
+                                    <td><span class="badge bg-secondary">${user.attendance_days}</span></td>
+                                    <td><span class="badge bg-dark">${user.working_hours}h</span></td>
+                                    <td><small>${user.last_punch ? new Date(user.last_punch).toLocaleDateString() : 'Never'}</small></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Load multi-month comparison
+        async function loadComparison() {
+            try {
+                const token = getAuthToken();
+                const months = document.getElementById('comparisonMonths').value;
+                const userId = document.getElementById('userSelect').value;
+
+                let url = `${API_BASE}/api/admin/attendance-comparison?months=${months}`;
+                if (userId) url += `&digital_id=${userId}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    displayComparison(result.comparison, result.summary);
+                }
+            } catch (error) {
+                console.error('Comparison load error:', error);
+            }
+        }
+
+        // Display comparison data
+        function displayComparison(comparison, summary) {
+            // Update chart
+            updateComparisonChart(comparison);
+
+            // Update table
+            const container = document.getElementById('comparisonTable');
+            const html = `
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Total Records</th>
+                                <th>Unique Users</th>
+                                <th>Avg per User</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${comparison.map((month, index) => {
+                                const prevMonth = comparison[index + 1];
+                                const trend = prevMonth ? (month.total_records > prevMonth.total_records ? 'up' : month.total_records < prevMonth.total_records ? 'down' : 'same') : 'same';
+                                const trendIcon = trend === 'up' ? 'fas fa-arrow-up text-success' : trend === 'down' ? 'fas fa-arrow-down text-danger' : 'fas fa-minus text-muted';
+
+                                return `
+                                    <tr>
+                                        <td><strong>${month.month_name} ${month.year}</strong></td>
+                                        <td><span class="badge bg-primary">${month.total_records}</span></td>
+                                        <td><span class="badge bg-info">${month.unique_users}</span></td>
+                                        <td><span class="badge bg-warning">${month.average_per_user}</span></td>
+                                        <td><i class="${trendIcon}"></i></td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Update comparison chart
+        function updateComparisonChart(comparison) {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+
+            if (comparisonChart) {
+                comparisonChart.destroy();
+            }
+
+            comparisonChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: comparison.map(m => `${m.month_name} ${m.year}`),
+                    datasets: [{
+                        label: 'Total Records',
+                        data: comparison.map(m => m.total_records),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Unique Users',
+                        data: comparison.map(m => m.unique_users),
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Multi-Month Attendance Comparison'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load user details
+        async function loadUserDetails() {
+            const userId = document.getElementById('userSelect').value;
+            if (!userId) {
+                document.getElementById('userDetails').innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-user me-2"></i>
+                        <p>Please select a user to view their attendance details</p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const token = getAuthToken();
+                const days = document.getElementById('userDays').value;
+                const response = await fetch(`${API_BASE}/api/admin/user-attendance/${userId}?days=${days}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    displayUserDetails(result.user, result.attendance);
+                }
+            } catch (error) {
+                console.error('User details load error:', error);
+                document.getElementById('userDetails').innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p>Failed to load user attendance details</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display user details
+        function displayUserDetails(user, attendance) {
+            const container = document.getElementById('userDetails');
+
+            const html = `
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <div class="avatar-circle mx-auto mb-3" style="background: ${getAvatarColor(user.name)}; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; font-weight: bold;">
+                                    ${user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <h5>${user.name}</h5>
+                                <p class="text-muted mb-1">${user.role}</p>
+                                <p class="text-muted mb-0">${user.industry_type}</p>
+                                <small class="text-muted">${user.digital_id}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row">
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="card text-center h-100">
+                                    <div class="card-body">
+                                        <h4 class="text-primary">${attendance.stats.total_records}</h4>
+                                        <p class="text-muted mb-0 small">Total Records</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="card text-center h-100">
+                                    <div class="card-body">
+                                        <h4 class="text-success">${attendance.stats.punch_in_count}</h4>
+                                        <p class="text-muted mb-0 small">Punch Ins</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="card text-center h-100">
+                                    <div class="card-body">
+                                        <h4 class="text-danger">${attendance.stats.punch_out_count}</h4>
+                                        <p class="text-muted mb-0 small">Punch Outs</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="card text-center h-100">
+                                    <div class="card-body">
+                                        <h4 class="text-info">${attendance.stats.unique_days}</h4>
+                                        <p class="text-muted mb-0 small">Active Days</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Method</th>
+                                <th>Location</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${attendance.records.map(record => `
+                                <tr>
+                                    <td>${new Date(record.timestamp).toLocaleDateString()}</td>
+                                    <td>${new Date(record.timestamp).toLocaleTimeString()}</td>
+                                    <td><span class="badge bg-${getPunchTypeColor(record.punch_type)}">${record.punch_type.replace('_', ' ')}</span></td>
+                                    <td>${record.attendance_method}</td>
+                                    <td>${record.location_data && record.location_data.qr_location ? record.location_data.qr_location : 'N/A'}</td>
+                                    <td>${record.notes || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Load industry analytics
+        async function loadIndustryAnalytics() {
+            try {
+                const token = getAuthToken();
+                const industry = document.getElementById('industrySelect').value;
+                const days = document.getElementById('industryDays').value;
+
+                let url = `${API_BASE}/api/admin/industry-analytics?days=${days}`;
+                if (industry) url += `&industry=${industry}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                if (result.success) {
+                    displayIndustryAnalytics(result.analytics, result.summary);
+                }
+            } catch (error) {
+                console.error('Industry analytics load error:', error);
+                document.getElementById('industryAnalytics').innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p>Failed to load industry analytics</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display industry analytics
+        function displayIndustryAnalytics(analytics, summary) {
+            const container = document.getElementById('industryAnalytics');
+
+            if (!analytics || analytics.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-chart-bar fa-2x mb-3"></i>
+                        <p>No industry analytics data available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = `
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-primary">${summary.total_industries}</h4>
+                                <p class="text-muted mb-0">Industries</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-success">${summary.total_users}</h4>
+                                <p class="text-muted mb-0">Total Users</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-info">${summary.total_punches}</h4>
+                                <p class="text-muted mb-0">Total Punches</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h4 class="text-warning">${summary.period_days}</h4>
+                                <p class="text-muted mb-0">Period (Days)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Industry</th>
+                                <th>Total Users</th>
+                                <th>Total Punches</th>
+                                <th>Active Days</th>
+                                <th>Avg Punches/User</th>
+                                <th>Roles Breakdown</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${analytics.map(industry => `
+                                <tr>
+                                    <td><strong>${industry.industry}</strong></td>
+                                    <td><span class="badge bg-primary">${industry.total_users}</span></td>
+                                    <td><span class="badge bg-success">${industry.total_punches}</span></td>
+                                    <td><span class="badge bg-info">${industry.active_days}</span></td>
+                                    <td><span class="badge bg-warning">${Math.round(industry.total_punches / industry.total_users) || 0}</span></td>
+                                    <td>
+                                        ${industry.roles.map(role => `<small class="badge bg-secondary me-1">${role.role}: ${role.users}</small>`).join('')}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Change view function
+        function changeView() {
+            const viewType = document.getElementById('viewType').value;
+            currentView = viewType;
+
+            // Hide all views
+            document.getElementById('monitorView').style.display = 'none';
+            document.getElementById('monthlyView').style.display = 'none';
+            document.getElementById('comparisonView').style.display = 'none';
+            document.getElementById('userView').style.display = 'none';
+            document.getElementById('industryView').style.display = 'none';
+
+            // Hide all filters
+            document.getElementById('monthFilter').style.display = 'none';
+            document.getElementById('yearFilter').style.display = 'none';
+            document.getElementById('userFilter').style.display = 'none';
+
+            // Show selected view and filters
+            switch (viewType) {
+                case 'monitor':
+                    document.getElementById('monitorView').style.display = 'block';
+                    loadLiveMonitor();
+                    break;
+                case 'monthly':
+                    document.getElementById('monthlyView').style.display = 'block';
+                    document.getElementById('monthFilter').style.display = 'flex';
+                    document.getElementById('yearFilter').style.display = 'flex';
+                    document.getElementById('userFilter').style.display = 'flex';
+                    loadMonthlyReport();
+                    break;
+                case 'comparison':
+                    document.getElementById('comparisonView').style.display = 'block';
+                    document.getElementById('userFilter').style.display = 'flex';
+                    loadComparison();
+                    break;
+                case 'user':
+                    document.getElementById('userView').style.display = 'block';
+                    document.getElementById('userFilter').style.display = 'flex';
+                    loadUserDetails();
+                    break;
+                case 'industry':
+                    document.getElementById('industryView').style.display = 'block';
+                    loadIndustryAnalytics();
+                    break;
+            }
+        }
+
+        // Start live updates
+        function startLiveUpdates() {
+            if (liveUpdateInterval) {
+                clearInterval(liveUpdateInterval);
+            }
+
+            // Update every 30 seconds
+            liveUpdateInterval = setInterval(() => {
+                if (currentView === 'monitor') {
+                    loadLiveMonitor();
+                }
+            }, 30000);
+
+            // Initial load
+            loadLiveMonitor();
+
+            // Show notification
+            showNotification('Live updates started! Data will refresh every 30 seconds.', 'success');
+        }
+
+        // Refresh data based on current view
+        function refreshData() {
+            switch (currentView) {
+                case 'monitor':
+                    loadLiveMonitor();
+                    break;
+                case 'monthly':
+                    loadMonthlyReport();
+                    break;
+                case 'comparison':
+                    loadComparison();
+                    break;
+                case 'user':
+                    loadUserDetails();
+                    break;
+                case 'industry':
+                    loadIndustryAnalytics();
+                    break;
+            }
+
+            loadDashboardStats();
+            showNotification('Data refreshed successfully!', 'success');
+        }
+
+        // Export functions (placeholders)
+        function exportMonthlyReport() {
+            showNotification('Export functionality coming soon!', 'info');
+        }
+
+        function exportComparison() {
+            showNotification('Export functionality coming soon!', 'info');
+        }
+
+        function exportUserReport() {
+            showNotification('Export functionality coming soon!', 'info');
+        }
+
+        // Utility functions
+        function updateCurrentTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+        }
+
+        function getAvatarColor(name) {
+            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function getPunchTypeClass(type) {
+            const classes = {
+                'in': 'punch-in',
+                'out': 'punch-out',
+                'break_start': 'break-start',
+                'break_end': 'break-end'
+            };
+            return classes[type] || 'punch-in';
+        }
+
+        function getPunchTypeColor(type) {
+            const colors = {
+                'in': 'success',
+                'out': 'danger',
+                'break_start': 'warning',
+                'break_end': 'info'
+            };
+            return colors[type] || 'secondary';
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/pages/register.html';
+            }
+        }
+
+        // Mobile sidebar toggle functionality
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('show');
+                overlay.classList.toggle('show');
+
+                // Prevent body scroll when sidebar is open
+                if (sidebar.classList.contains('show')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            if (sidebar && overlay) {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Close sidebar when clicking on nav links (mobile)
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 992) {
+                        closeSidebar();
+                    }
+                });
+            });
+        });
+
+        // Initialize with monitor view
+        document.addEventListener('DOMContentLoaded', function() {
+            changeView();
+        });
+    </script>
+</body>
+</html>
