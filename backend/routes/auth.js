@@ -13,35 +13,25 @@ const os = require('os');
 // Import middleware
 const { authenticateToken } = require('../middleware/auth');
 
-// Environment variables
-const EMAIL_USER = process.env.EMAIL_USER || 'kabdulrehman8169@gmail.com';
-const EMAIL_PASS = process.env.EMAIL_PASS || 'wtpgxovmxlqcbgmx';
-const JWT_SECRET = process.env.JWT_SECRET || 'UniversalAttendance2025_SecretKey!@#';
+// Environment variables (set via backend/.env, loaded by the server entry point)
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// In-memory stores (these should be moved to a shared module or Redis in production)
-const otps = {};
-const rateLimitStore = {};
-const resetTokens = {}; // Shared store for password reset tokens
-
-// Rate limiting function
-function checkRateLimit(key, limit = 5, windowMs = 60000) {
-  const now = Date.now();
-  const windowStart = now - windowMs;
-  
-  if (!rateLimitStore[key]) {
-    rateLimitStore[key] = [];
-  }
-  
-  // Remove old entries
-  rateLimitStore[key] = rateLimitStore[key].filter(timestamp => timestamp > windowStart);
-  
-  if (rateLimitStore[key].length >= limit) {
-    return false;
-  }
-  
-  rateLimitStore[key].push(now);
-  return true;
-}
+// Persistent stores (OTP, reset tokens, rate limits) backed by SQLite so they
+// survive restarts and work across multiple Node processes.
+const {
+  setOTP,
+  getOTP,
+  incrementOTPAttempts,
+  deleteOTP,
+  setResetToken,
+  getResetToken,
+  markResetTokenUsed,
+  deleteResetToken,
+  checkRateLimit,
+  logAudit
+} = require('../utils/stores');
 
 // Enhanced digital ID generation - globally unique across all users with cleanup
 function generateDigitalId(role, industry, organizationId, db, callback) {
@@ -85,6 +75,23 @@ function getOrganizationByEmail(email, db) {
   });
 }
 
+// Output encoding for emails (prevents HTML injection via user-supplied
+// fields like name/organization name) and log redaction for PII.
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const maskEmail = (email) => {
+  if (!email || typeof email !== 'string' || !email.includes('@')) return '[redacted]';
+  const [local, domain] = email.split('@');
+  const shown = local.slice(0, 2);
+  return `${shown}${'*'.repeat(Math.max(local.length - 2, 1))}@${domain}`;
+};
+
 // Enhanced Nodemailer transporter with retry logic
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -93,23 +100,30 @@ const transporter = nodemailer.createTransport({
   maxConnections: 5,
   maxMessages: 10,
   retryDelay: 1000,
-  retryMax: 3
+  retryMax: 3,
+  // Prevent slow/hung SMTP connections from blocking requests indefinitely
+  connectionTimeout: 10000,   // 10s to establish the SMTP connection
+  greetingTimeout: 10000,     // 10s to receive the server greeting
+  socketTimeout: 20000        // 20s max idle on the socket during a send
 });
 
 
 
 // Enhanced OTP email with organization branding
 async function sendOTP(email, otp, digital_id, name, organizationName = "Universal Attendance") {
+  // Header-safe + HTML-safe rendering of user-supplied values.
+  const safeOrg = escapeHtml(String(organizationName)).replace(/[\r\n]+/g, ' ');
+  const safeName = escapeHtml(name);
   const mailOptions = {
-    from: `"${organizationName}" <${EMAIL_USER}>`,
+    from: `"${safeOrg.replace(/"/g, '')}" <${EMAIL_USER}>`,
     to: email,
-    subject: `Welcome to ${organizationName} - Verify Your Account`,
+    subject: `Welcome to ${safeOrg} - Verify Your Account`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
         <div style="background: white; border-radius: 10px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #2c3e50; margin: 0;">Welcome ${name}!</h1>
-            <p style="color: #7f8c8d; margin: 10px 0;">Your account has been successfully created at ${organizationName}</p>
+            <h1 style="color: #2c3e50; margin: 0;">Welcome ${safeName}!</h1>
+            <p style="color: #7f8c8d; margin: 10px 0;">Your account has been successfully created at ${safeOrg}</p>
           </div>
           
           <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 20px 0;">
@@ -138,7 +152,7 @@ async function sendOTP(email, otp, digital_id, name, organizationName = "Univers
   };
   
   await transporter.sendMail(mailOptions);
-  console.log(` Welcome email sent to ${email} for ${name} at ${organizationName}`);
+  console.log(` Welcome email sent to ${maskEmail(email)} at ${escapeHtml(organizationName)}`);
 }
 
 // Enhanced registration route for creating new organizations (Admin Setup)
@@ -152,7 +166,7 @@ router.post('/register-organization', async (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
 
     // Rate limiting - relaxed for development
-    if (!checkRateLimit(`register_org_${clientIp}`, 10, 300000)) { // 10 attempts per 5 minutes
+    if (!(await checkRateLimit(`register_org_${clientIp}`, 10, 300000))) { // 10 attempts per 5 minutes
       return res.status(429).json({ success: false, message: "Too many organization registration attempts. Please wait 5 minutes." });
     }
 
@@ -168,8 +182,8 @@ router.post('/register-organization', async (req, res) => {
     }
 
     // Password validation
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: "Password must be at least 6 characters long" });
+    if (password.length < 12) {
+      return res.status(400).json({ success: false, message: "Password must be at least 12 characters long" });
     }
 
     // Check if email already exists
@@ -299,14 +313,14 @@ router.post('/register', async (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
 
     console.log('🔄 Registration attempt started:', {
-      email: email?.toLowerCase(),
-      organization_code: organization_code?.toUpperCase(),
+      email: maskEmail(email),
+      organization_code: organization_code ? '***' + String(organization_code).slice(-2) : undefined,
       industry_type,
       timestamp: new Date().toISOString()
     });
 
     // Rate limiting
-    if (!checkRateLimit(`register_${clientIp}`, 3, 300000)) { // 3 attempts per 5 minutes
+    if (!(await checkRateLimit(`register_${clientIp}`, 3, 300000))) { // 3 attempts per 5 minutes
       console.log('⏱️ Rate limit exceeded for IP:', clientIp);
       return res.status(429).json({ success: false, message: "Too many registration attempts. Please wait 5 minutes." });
     }
@@ -326,14 +340,39 @@ router.post('/register', async (req, res) => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      console.log('❌ Invalid email format:', email);
+      console.log('❌ Invalid email format:', maskEmail(email));
       return res.status(400).json({ success: false, message: "Please provide a valid email address" });
     }
 
     // Password validation
-    if (password.length < 6) {
+    if (password.length < 12) {
       console.log('❌ Password too short');
-      return res.status(400).json({ success: false, message: "Password must be at least 6 characters long" });
+      return res.status(400).json({ success: false, message: "Password must be at least 12 characters long" });
+    }
+
+    // Server-side role whitelist to prevent privilege escalation / self-admin.
+    // The server, never the client, decides which roles a self-registering user
+    // may hold. Admin/owner-style roles can ONLY be assigned via /organization/register.
+    const SELF_REGISTER_ROLES = {
+      healthcare: ['doctor', 'nurse', 'technician', 'receptionist', 'pharmacist', 'staff', 'patient'],
+      education: ['teacher', 'professor', 'student', 'librarian', 'counselor'],
+      corporate: ['employee', 'manager', 'executive', 'developer', 'analyst', 'hr', 'intern', 'sales representative'],
+      manufacturing: ['worker', 'operator', 'supervisor', 'quality inspector', 'maintenance', 'safety officer'],
+      government: ['officer', 'clerk', 'inspector', 'coordinator'],
+      retail: ['sales associate', 'cashier', 'manager', 'stock clerk', 'customer service']
+    };
+    const normalizedIndustry = (industry_type || '').toLowerCase().trim();
+    const normalizedRole = (role || '').toLowerCase().trim();
+    const allowedRoles = SELF_REGISTER_ROLES[normalizedIndustry] || [];
+
+    // Block admin/owner-style roles regardless of casing/spelling, and any role
+    // not on the explicit per-industry whitelist.
+    if (/admin|owner|root/i.test(normalizedRole) || !allowedRoles.includes(normalizedRole)) {
+      console.log('❌ Role not permitted for self-registration:', role);
+      return res.status(400).json({
+        success: false,
+        message: 'Role is not permitted for self-registration. Please contact your administrator.'
+      });
     }
 
     console.log('✅ Basic validation passed, validating organization code...');
@@ -345,7 +384,7 @@ router.post('/register', async (req, res) => {
         FROM organization_codes oc
         LEFT JOIN organizations o ON oc.organization_id = o.id
         WHERE UPPER(oc.code) = ? AND oc.is_active = 1
-      `, [organization_code.toUpperCase()], (err, codeData) => {
+      `, [String(organization_code || '').trim().toUpperCase()], (err, codeData) => {
         if (err) {
           console.error('❌ Database error during org code validation:', err);
           reject(err);
@@ -387,7 +426,7 @@ router.post('/register', async (req, res) => {
     });
 
     if (existingUser && existingUser.is_verified) {
-      console.log('❌ Email already registered and verified:', email);
+      console.log('❌ Email already registered and verified:', maskEmail(email));
       return res.status(409).json({ success: false, message: "Email already registered and verified" });
     } else if (existingUser && !existingUser.is_verified) {
       console.log('ℹ️ Found unverified user, cleaning up...');
@@ -498,15 +537,15 @@ router.post('/register', async (req, res) => {
 
     // Get organization name for email branding
     const orgName = orgValidation.organization_name || "Universal Attendance";
-    console.log('📧 Preparing to send OTP email to:', email);
+    console.log('📧 Preparing to send OTP email to:', maskEmail(email));
 
-    // Generate and send OTP
+    // Generate and send OTP (persisted so it survives restarts)
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otps[digital_id] = {
+    await setOTP(digital_id, {
       otp,
       expires: Date.now() + 10 * 60 * 1000, // 10 minutes
       attempts: 0
-    };
+    });
 
     try {
       await sendOTP(email, otp, digital_id, name, orgName);
@@ -556,12 +595,12 @@ router.post('/register', async (req, res) => {
 });
 
 // Enhanced OTP Verification with attempt limiting
-router.post('/verify', (req, res) => {
+router.post('/verify', async (req, res) => {
   const { digital_id, otp } = req.body;
   const clientIp = req.ip || req.connection.remoteAddress;
   
   // Rate limiting
-  if (!checkRateLimit(`verify_${clientIp}`, 5, 300000)) { // 5 attempts per 5 minutes
+  if (!(await checkRateLimit(`verify_${clientIp}`, 5, 300000))) { // 5 attempts per 5 minutes
     return res.status(429).json({ success: false, message: "Too many verification attempts. Please wait." });
   }
   
@@ -569,26 +608,27 @@ router.post('/verify', (req, res) => {
     return res.status(400).json({ success: false, message: "Digital ID and OTP are required" });
   }
 
-  const otpEntry = otps[digital_id];
+  const otpEntry = await getOTP(digital_id);
   if (!otpEntry) {
     return res.status(404).json({ success: false, message: "OTP not found or expired. Please request a new one." });
   }
 
   if (Date.now() > otpEntry.expires) {
-    delete otps[digital_id];
+    await deleteOTP(digital_id);
     return res.status(400).json({ success: false, message: "OTP has expired. Please request a new one." });
   }
 
   // Increment attempts
-  otpEntry.attempts = (otpEntry.attempts || 0) + 1;
-  
-  if (otpEntry.attempts > 3) {
-    delete otps[digital_id];
+  const newAttempts = (otpEntry.attempts || 0) + 1;
+
+  if (newAttempts > 3) {
+    await deleteOTP(digital_id);
     return res.status(400).json({ success: false, message: "Too many failed attempts. Please register again." });
   }
 
   if (otpEntry.otp !== otp.trim()) {
-    return res.status(400).json({ success: false, message: `Invalid OTP. ${4 - otpEntry.attempts} attempts remaining.` });
+    await incrementOTPAttempts(digital_id, newAttempts);
+    return res.status(400).json({ success: false, message: `Invalid OTP. ${4 - newAttempts} attempts remaining.` });
   }
 
   // Get user information after verification for direct login
@@ -622,7 +662,7 @@ router.post('/verify', (req, res) => {
       
       const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
       
-      delete otps[digital_id];
+      deleteOTP(digital_id).catch(() => {});
       console.log(` User verified and logged in: ${digital_id}`);
       
       res.json({ 
@@ -644,7 +684,7 @@ router.post('/resend-otp', async (req, res) => {
   const clientIp = req.ip || req.connection.remoteAddress;
   
   // Rate limiting for resend requests
-  if (!checkRateLimit(`resend_${clientIp}`, 3, 600000)) { // 3 attempts per 10 minutes
+  if (!(await checkRateLimit(`resend_${clientIp}`, 3, 600000))) { // 3 attempts per 10 minutes
     return res.status(429).json({ success: false, message: 'Too many resend requests. Please wait 10 minutes.' });
   }
   
@@ -672,11 +712,11 @@ router.post('/resend-otp', async (req, res) => {
     }
     
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otps[digital_id] = { 
-      otp, 
+    await setOTP(digital_id, {
+      otp,
       expires: Date.now() + 10 * 60 * 1000,
-      attempts: 0 
-    };
+      attempts: 0
+    });
     
     await sendOTP(user.email, otp, digital_id, user.name, user.org_name || 'Universal Attendance');
     
@@ -696,7 +736,7 @@ router.post('/login', async (req, res) => {
     const userAgent = req.headers['user-agent'] || 'Unknown';
     
     // Rate limiting for login attempts
-    if (!checkRateLimit(`login_${clientIp}`, 10, 900000)) { // 10 attempts per 15 minutes
+    if (!(await checkRateLimit(`login_${clientIp}`, 10, 900000))) { // 10 attempts per 15 minutes
       return res.status(429).json({ success: false, message: "Too many login attempts. Please wait 15 minutes." });
     }
     
@@ -761,12 +801,15 @@ router.post('/login', async (req, res) => {
       [digital_id]
     );
 
-    // Log successful login
-    req.db.run(
-      `INSERT INTO attendance (digital_id, organization_id, attendance_method, punch_type, notes, ip_address, user_agent) 
-       VALUES (?, ?, 'system', 'login', 'User logged in', ?, ?)`,
-      [user.digital_id, user.organization_id, clientIp, userAgent]
-    );
+    // Log successful login (audit log, not the attendance table)
+    logAudit({
+      digital_id: user.digital_id,
+      organization_id: user.organization_id,
+      action: 'login',
+      details: 'User logged in',
+      ip_address: clientIp,
+      user_agent: userAgent
+    });
 
     console.log(` User ${digital_id} logged in successfully from ${clientIp}`);
 
@@ -830,7 +873,11 @@ router.get('/profile', authenticateToken, (req, res) => {
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
     const digital_id = req.user.digital_id;
-    const { name, email, phone, dateofbirth, address } = req.body;
+    // NOTE: the `users` table has no `dateofbirth`/`address` columns, so only
+    // update the columns that actually exist to avoid the query failing.
+    const { name } = req.body;
+    let email = req.body.email;
+    let phone = req.body.phone;
 
     // Validation
     if (!name || !email) {
@@ -859,9 +906,9 @@ router.put('/profile', authenticateToken, async (req, res) => {
     await new Promise((resolve, reject) => {
       req.db.run(`
         UPDATE users
-        SET name = ?, email = ?, phone = ?, dateofbirth = ?, address = ?, updated_at = CURRENT_TIMESTAMP
+        SET name = ?, email = ?, phone = ?, updated_at = CURRENT_TIMESTAMP
         WHERE digital_id = ?
-      `, [name, email.toLowerCase(), phone || null, dateofbirth || null, address || null, digital_id], function(err) {
+      `, [name, email.toLowerCase(), phone, digital_id], function(err) {
         if (err) reject(err);
         resolve();
       });
@@ -887,8 +934,8 @@ router.post('/change-password', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: "Current password and new password are required" });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: "New password must be at least 6 characters long" });
+    if (newPassword.length < 12) {
+      return res.status(400).json({ success: false, message: "New password must be at least 12 characters long" });
     }
 
     // Get current user password
@@ -936,7 +983,7 @@ router.post('/forgot-password', async (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
 
     // Rate limiting for forgot password requests
-    if (!checkRateLimit(`forgot_${clientIp}`, 3, 600000)) { // 3 attempts per 10 minutes
+    if (!(await checkRateLimit(`forgot_${clientIp}`, 3, 600000))) { // 3 attempts per 10 minutes
       return res.status(429).json({ success: false, message: 'Too many password reset requests. Please wait 10 minutes.' });
     }
 
@@ -968,7 +1015,7 @@ router.post('/forgot-password', async (req, res) => {
 
     if (!user) {
       // For security, don't reveal if email exists or not
-      console.log(` Password reset attempt for non-existent email: ${email}`);
+      console.log(` Password reset attempt for non-existent email: ${maskEmail(email)}`);
       return res.status(200).json({
         success: true,
         message: 'If the email address is registered, you will receive password reset instructions shortly.'
@@ -993,33 +1040,35 @@ router.post('/forgot-password', async (req, res) => {
       { expiresIn: '1h' } // Token expires in 1 hour
     );
 
-    // Store reset token temporarily (in production, use Redis or database)
-    resetTokens[email.toLowerCase()] = {
+    // Store reset token persistently (survives restarts)
+    await setResetToken(email.toLowerCase(), {
       token: resetToken,
       expires: Date.now() + 60 * 60 * 1000, // 1 hour
       used: false
-    };
+    });
 
     // Get organization name for email branding
     const orgName = user.org_name || 'Universal Attendance';
 
     // Generate reset link for local development using 127.0.0.1
     const resetLink = `http://127.0.0.1:4000/pages/reset-password.html?token=${resetToken}`;
+    const safeOrg = escapeHtml(orgName).replace(/[\r\n]+/g, ' ');
+    const safeUserName = escapeHtml(user.name);
     const mailOptions = {
-      from: `"${orgName}" <${EMAIL_USER}>`,
+      from: `"${safeOrg.replace(/"/g, '')}" <${EMAIL_USER}>`,
       to: email,
-      subject: `Password Reset Request - ${orgName}`,
+      subject: `Password Reset Request - ${safeOrg}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
           <div style="background: white; border-radius: 10px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
               <h1 style="color: #2c3e50; margin: 0;">Password Reset Request</h1>
-              <p style="color: #7f8c8d; margin: 10px 0;">${orgName} - Attendance System</p>
+              <p style="color: #7f8c8d; margin: 10px 0;">${safeOrg} - Attendance System</p>
             </div>
 
             <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h4 style="color: #856404; margin-top: 0;">Hello ${user.name}!</h4>
-              <p style="margin: 10px 0;">You have requested to reset your password for your ${orgName} account.</p>
+              <h4 style="color: #856404; margin-top: 0;">Hello ${safeUserName}!</h4>
+              <p style="margin: 10px 0;">You have requested to reset your password for your ${safeOrg} account.</p>
               <p style="margin: 10px 0; color: #856404;">
                 <strong>Digital ID:</strong> ${user.digital_id}
               </p>
@@ -1059,7 +1108,7 @@ router.post('/forgot-password', async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    console.log(` Password reset email sent to: ${email} for ${user.digital_id}`);
+    console.log(` Password reset email sent to: ${maskEmail(email)}`);
     res.json({
       success: true,
       message: 'Password reset instructions have been sent to your email address.'
@@ -1087,11 +1136,16 @@ router.post('/verify-reset-token', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid token type' });
     }
 
-    // Check if token exists in our store (in production, use Redis or database)
-    const tokenData = resetTokens[decoded.email];
+    // Check if token exists in our persistent store
+    const tokenData = await getResetToken(decoded.email);
 
     if (!tokenData || tokenData.used) {
       return res.status(400).json({ success: false, message: 'Token not found or already used' });
+    }
+
+    // Check if token matches (defense in depth against a stale store entry)
+    if (tokenData.token !== token) {
+      return res.status(400).json({ success: false, message: 'Invalid token' });
     }
 
     // Check if token is expired
@@ -1099,7 +1153,7 @@ router.post('/verify-reset-token', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Token has expired' });
     }
 
-    console.log(` Reset token verified for: ${decoded.email}`);
+    console.log(` Reset token verified for: ${maskEmail(decoded.email)}`);
     res.json({
       success: true,
       message: 'Token verified successfully',
@@ -1127,8 +1181,8 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Token and new password are required' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    if (newPassword.length < 12) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 12 characters long' });
     }
 
     // Verify JWT token
@@ -1138,11 +1192,16 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid token type' });
     }
 
-    // Check if token exists in our store (in production, use Redis or database)
-    const tokenData = resetTokens[decoded.email];
+    // Check if token exists in our persistent store
+    const tokenData = await getResetToken(decoded.email);
 
     if (!tokenData || tokenData.used) {
       return res.status(400).json({ success: false, message: 'Token not found or already used' });
+    }
+
+    // Check if token matches (defense in depth against a stale store entry)
+    if (tokenData.token !== token) {
+      return res.status(400).json({ success: false, message: 'Invalid token' });
     }
 
     // Check if token is expired
@@ -1165,15 +1224,17 @@ router.post('/reset-password', async (req, res) => {
       );
     });
 
-    // Mark token as used
-    tokenData.used = true;
+    // Mark token as used (persistently)
+    await markResetTokenUsed(decoded.email);
 
-    // Log password reset activity
-    req.db.run(
-      `INSERT INTO attendance (digital_id, organization_id, attendance_method, punch_type, notes, ip_address, user_agent)
-       VALUES (?, (SELECT organization_id FROM users WHERE digital_id = ?), 'system', 'password_reset', 'Password reset via email', ?, ?)`,
-      [decoded.digital_id, decoded.digital_id, req.ip || req.connection.remoteAddress, req.headers['user-agent'] || 'Unknown']
-    );
+    // Log password reset activity (audit log, not the attendance table)
+    logAudit({
+      digital_id: decoded.digital_id,
+      action: 'password_reset',
+      details: 'Password reset via email',
+      ip_address: req.ip || req.connection.remoteAddress,
+      user_agent: req.headers['user-agent'] || 'Unknown'
+    });
 
     console.log(` Password reset successful for: ${decoded.digital_id}`);
     res.json({

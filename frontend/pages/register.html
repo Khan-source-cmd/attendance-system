@@ -348,7 +348,7 @@
         <div class="col-md-6">
           <label for="password" class="form-label">Password *</label>
           <div class="input-group">
-            <input id="password" name="password" type="password" minlength="6" required class="form-control" autocomplete="new-password" />
+            <input id="password" name="password" type="password" minlength="12" required class="form-control" autocomplete="new-password" />
             <button type="button" id="togglePassword" class="btn btn-outline-secondary" aria-label="Toggle password visibility">
               <i class="fas fa-eye"></i>
             </button>
@@ -551,7 +551,7 @@
               <div class="col-md-6">
                 <label for="modalAdminPassword" class="form-label">Password *</label>
                 <div class="input-group">
-                  <input id="modalAdminPassword" name="password" type="password" minlength="6" required class="form-control" placeholder="Create a strong password" />
+                  <input id="modalAdminPassword" name="password" type="password" minlength="12" required class="form-control" placeholder="Create a strong password" />
                   <button type="button" id="modalToggleAdminPassword" class="btn btn-outline-secondary" aria-label="Toggle password visibility">
                     <i class="fas fa-eye"></i>
                   </button>
@@ -1208,8 +1208,8 @@
       }
 
       // Additional validation
-      if(formData.password.length < 6){
-        showFeedback('Password must be at least 6 characters long.', 'danger');
+      if(formData.password.length < 12){
+        showFeedback('Password must be at least 12 characters long.', 'danger');
         document.getElementById('password').focus();
         return;
       }
@@ -1329,8 +1329,8 @@
       }
 
       // Additional validation
-      if (formData.password.length < 6) {
-        showFeedback('Password must be at least 6 characters long.', 'danger');
+      if (formData.password.length < 12) {
+        showFeedback('Password must be at least 12 characters long.', 'danger');
         document.getElementById('modalAdminPassword').focus();
         return;
       }

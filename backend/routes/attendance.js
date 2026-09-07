@@ -10,28 +10,8 @@ const QRCode = require('qrcode');
 // Import middleware
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// In-memory stores (these should be moved to a shared module or Redis in production)
-const rateLimitStore = {};
-
-// Rate limiting function
-function checkRateLimit(key, limit = 5, windowMs = 60000) {
-  const now = Date.now();
-  const windowStart = now - windowMs;
-
-  if (!rateLimitStore[key]) {
-    rateLimitStore[key] = [];
-  }
-
-  // Remove old entries
-  rateLimitStore[key] = rateLimitStore[key].filter(timestamp => timestamp > windowStart);
-
-  if (rateLimitStore[key].length >= limit) {
-    return false;
-  }
-
-  rateLimitStore[key].push(now);
-  return true;
-}
+// Shared persistent rate limiter (SQLite-backed, survives restarts)
+const { checkRateLimit } = require('../utils/stores');
 
 // Get user's current attendance state
 function getUserAttendanceState(db, digitalId, callback) {
@@ -152,7 +132,7 @@ function validatePunchTransition(currentState, requestedPunchType) {
 }
 
 // Submit manual punch request (requires approval)
-router.post('/request', authenticateToken, (req, res) => {
+router.post('/request', authenticateToken, async (req, res) => {
   const { punch_type, requested_timestamp, notes, attendance_method = 'manual', location_data } = req.body;
   const clientIp = req.ip || req.connection.remoteAddress;
   
@@ -167,7 +147,7 @@ router.post('/request', authenticateToken, (req, res) => {
   }
 
   // Rate limiting for manual requests
-  if (!checkRateLimit(`manual_request_${req.user.digital_id}`, 10, 3600000)) { // 10 requests per hour
+  if (!(await checkRateLimit(`manual_request_${req.user.digital_id}`, 10, 3600000))) { // 10 requests per hour
     return res.status(429).json({ success: false, message: "Too many manual requests. Please wait." });
   }
 
@@ -352,7 +332,7 @@ router.post('/requests/:id/reject', authenticateToken, requireAdmin, (req, res) 
 });
 
 // Enhanced attendance punch with comprehensive tracking and state validation
-router.post('/punch', authenticateToken, (req, res) => {
+router.post('/punch', authenticateToken, async (req, res) => {
   const { punch_type, attendance_method = 'manual', notes, location_data } = req.body;
   const clientIp = req.ip || req.connection.remoteAddress;
   const userAgent = req.headers['user-agent'] || 'Unknown';
@@ -368,7 +348,7 @@ router.post('/punch', authenticateToken, (req, res) => {
   }
 
   // Rate limiting for punch requests
-  if (!checkRateLimit(`punch_${req.user.digital_id}`, 20, 3600000)) { // 20 punches per hour
+  if (!(await checkRateLimit(`punch_${req.user.digital_id}`, 20, 3600000))) { // 20 punches per hour
     return res.status(429).json({ success: false, message: "Too many attendance entries. Please wait." });
   }
 

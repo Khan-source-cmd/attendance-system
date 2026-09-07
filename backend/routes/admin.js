@@ -9,15 +9,6 @@ const router = express.Router();
 // Import middleware
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// Test route to verify admin routes are loaded
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: "Admin routes are working!",
-    timestamp: new Date().toISOString()
-  });
-});
-
 // Enhanced admin routes - Get all users
 router.get('/users', authenticateToken, requireAdmin, (req, res) => {
   const { limit = 100, offset = 0, industry, role, active_only } = req.query;

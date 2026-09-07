@@ -1,11 +1,9 @@
 require('dotenv').config();
-require('dotenv').config({ path: './config/.env' });
 
 const integrationController = require('./controllers/integrationController');
 
 const express = require("express");
 const cors = require("cors");
-const sqlite3 = require("sqlite3").verbose();
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -17,27 +15,69 @@ const { check, validationResult } = require('express-validator');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Environment variables with better validation
-const EMAIL_USER = process.env.EMAIL_USER || 'kabdulrehman8169@gmail.com';
-const EMAIL_PASS = process.env.EMAIL_PASS || 'wtpgxovmxlqcbgmx';
-const JWT_SECRET = process.env.JWT_SECRET || 'UniversalAttendance2025_SecretKey!@#';
-const JWT_RESET_SECRET = process.env.JWT_RESET_SECRET || 'PasswordReset_Secret_Key_2025';
-
-// Validate critical environment variables
-if (!JWT_SECRET || JWT_SECRET === 'UniversalAttendance2024_SecretKey!@#') {
-  console.log('⚠️  Using default JWT secret. Set JWT_SECRET in .env for production');
+// ---------------------------------------------------------------------------
+// Environment variables - MUST be provided via backend/.env (see .env.example).
+// No hard-coded secrets are allowed as fallbacks (security hardening).
+// ---------------------------------------------------------------------------
+function requireEnv(name, minLength = 16) {
+  const value = process.env[name];
+  if (!value || typeof value !== 'string' || value.trim().length < minLength) {
+    console.error(`❌ Missing or insecure "${name}". Set it in backend/.env (see backend/.env.example).`);
+    process.exit(1);
+  }
+  return value.trim();
 }
 
-// Simple CORS setup for local development - Allow all origins for development
+const EMAIL_USER = requireEnv('EMAIL_USER');
+const EMAIL_PASS = requireEnv('EMAIL_PASS');
+const JWT_SECRET = requireEnv('JWT_SECRET');
+const JWT_RESET_SECRET = requireEnv('JWT_RESET_SECRET');
+
+// CORS with an explicit allow-list (from env). Never reflect arbitrary origins
+// together with credentials for a browser-facing API.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:4000')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: true, // Allow all origins for development
+  origin(origin, callback) {
+    // Allow same-origin / non-browser requests (curl, server-to-server, etc.).
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Deny unknown origins - the browser will block the response.
+    return callback(null, false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Security headers (no extra dependency needed).
+// CSP allows inline scripts/styles and https CDNs because the bundled frontend
+// uses them; it still blocks object/embed, framing, and off-origin base URIs.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https:; " +
+    "style-src 'self' 'unsafe-inline' https:; " +
+    "img-src 'self' data: blob: https:; " +
+    "font-src 'self' data: https:; " +
+    "connect-src 'self'; " +
+    "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+  );
+  next();
+});
 app.use(express.static(path.join(__dirname, "../frontend")));
 
 // Enhanced logging middleware
@@ -47,17 +87,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Database file path
-const dbFile = path.join(__dirname, "database.db");
-
-// Connect to SQLite with enhanced error handling
-const db = new sqlite3.Database(dbFile, (err) => {
-  if (err) {
-    console.error("❌ Failed to connect to SQLite:", err.message);
-    process.exit(1);
-  }
-  console.log("📦 Universal Attendance System - Database Connected");
-});
+// Database: single shared connection (backend/database.db).
+// All modules (routes, helpers/models, stores) use this same connection so
+// reads and writes cannot land in different files.
+const { db, dbFile } = require('./config/database');
 
 // Enhanced database schema for universal system with multi-tenant support
 db.serialize(() => {
@@ -1131,19 +1164,6 @@ app.get('/api/student/upcoming-lectures', authenticateToken, (req, res) => {
   });
 });
 
-// Test endpoint to verify routes are working
-app.get('/api/test', (req, res) => {
-  res.json({
-    success: true,
-    message: "API routes are working",
-    timestamp: new Date().toISOString(),
-    routes: {
-      admin: ['/api/admin/dashboard', '/api/admin/organization', '/api/admin/users'],
-      organization: ['/api/organization/generate-code', '/api/organization/codes', '/api/organization/']
-    }
-  });
-});
-
 // Force reload routes (for development)
 app.get('/api/reload', (req, res) => {
   try {
@@ -1275,8 +1295,6 @@ app.listen(PORT, () => {
   console.log(` Multi-tenant: Organizations & Departments`);
   console.log(` Industries: Healthcare, Education, Corporate, Manufacturing, Government, Retail`);
   console.log(` Features: Enhanced Security, QR Codes, Teacher Management, Admin Panel, Manual Punch Approval`);
-  console.log(` JWT Secret: ${JWT_SECRET.substring(0, 10)}...`);
-  console.log(` Email Service: ${EMAIL_USER}`);
   console.log(` Started: ${new Date().toISOString()}`);
   console.log("=".repeat(70));
 });

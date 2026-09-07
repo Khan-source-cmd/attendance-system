@@ -434,9 +434,20 @@ router.get('/export/attendance', authenticateToken, requireAdmin, (req, res) => 
 
     if (format === 'csv') {
       // Generate CSV format
+      // Sanitize cells to prevent CSV formula injection (values starting with
+      // =, +, -, @ are interpreted as formulas by Excel/LibreOffice) and to
+      // safely escape quotes/newlines.
+      const csvCell = (value) => {
+        let v = String(value ?? '');
+        v = v.replace(/\r?\n/g, ' ');               // keep one record per line
+        if (/^[=+\-@\t\r]/.test(v)) v = `'` + v;    // neutralize formula prefix
+        return `"${v.replace(/"/g, '""')}"`;
+      };
       const csvHeader = 'Digital ID,Name,Role,Industry,Punch Type,Timestamp,Method,Notes,Verified By\n';
       const csvData = records.map(record => 
-        `"${record.digital_id}","${record.name}","${record.role}","${record.industry_type}","${record.punch_type}","${record.timestamp}","${record.attendance_method}","${record.notes || ''}","${record.verified_by || ''}"`
+        [record.digital_id, record.name, record.role, record.industry_type, record.punch_type,
+         record.timestamp, record.attendance_method, record.notes || '', record.verified_by || '']
+          .map(csvCell).join(',')
       ).join('\n');
 
       res.setHeader('Content-Type', 'text/csv');

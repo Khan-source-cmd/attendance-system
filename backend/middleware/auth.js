@@ -4,8 +4,11 @@
  */
 const jwt = require('jsonwebtoken');
 
-// Environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'UniversalAttendance2025_SecretKey!@#';
+// Environment variables (set via backend/.env, loaded by the server entry point)
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not set. Configure backend/.env before starting the server.');
+}
 
 // Enhanced JWT authentication middleware
 const authenticateToken = (req, res, next) => {
@@ -39,16 +42,32 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Canonical admin role names (lowercase). Centralized so every role guard
+// accepts exactly the same set — previously requireAdmin and requireOrgAdmin
+// disagreed, causing inconsistent authorization.
+const ADMIN_ROLES = [
+  'admin',
+  'administrator',
+  'system administrator',
+  'super admin',
+  'super_admin',
+  'org_admin',
+  'organization admin',
+  'organization_admin'
+];
+
+const isAdminRole = (role) => {
+  if (typeof role !== 'string') return false;
+  return ADMIN_ROLES.includes(role.toLowerCase().trim());
+};
+
 // Enhanced admin middleware with better role checking
 const requireAdmin = (req, res, next) => {
   if (!req.user || !req.user.role) {
     return res.status(403).json({ success: false, message: "Admin access required" });
   }
   
-  const role = req.user.role.toLowerCase().trim();
-  const allowedAdminRoles = ['admin', 'administrator', 'system administrator', 'super admin'];
-  
-  if (!allowedAdminRoles.includes(role)) {
+  if (!isAdminRole(req.user.role)) {
     console.log(` Access denied for role: ${req.user.role}`);
     return res.status(403).json({ success: false, message: "Admin privileges required" });
   }
@@ -75,9 +94,11 @@ const requireTeacher = (req, res, next) => {
   next();
 };
 
-// Middleware to require organization admin role
+// Middleware to require organization admin role (uses the shared canonical
+// admin role set, case-insensitive — previously only 'admin'/'org_admin' with
+// exact case matching, which denied legitimate 'Administrator' accounts).
 const requireOrgAdmin = (req, res, next) => {
-    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'org_admin')) {
+    if (!req.user || !isAdminRole(req.user.role)) {
         return res.status(403).json({
             success: false,
             message: 'Access denied: Organization admin privileges required'

@@ -17,7 +17,7 @@ class Validators {
 
     // Password strength validation
     static validatePassword(password) {
-        const minLength = 6;
+        const minLength = 12;
         const hasUpperCase = /[A-Z]/.test(password);
         const hasLowerCase = /[a-z]/.test(password);
         const hasNumbers = /\d/.test(password);

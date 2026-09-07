@@ -1,24 +1,9 @@
 /**
  * Helper Utilities for Universal Attendance System
  */
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
 const QRCode = require('qrcode');
-
-// Use the same database file path as index.js for consistency
-const dbFile = path.join(__dirname, '../database.db');
-
-// Create database connection with proper error handling
-const db = new sqlite3.Database(dbFile, (err) => {
-    if (err) {
-        console.error('❌ Failed to connect to database in helpers.js:', err.message);
-        throw err;
-    }
-    console.log('📦 Database connection established in helpers.js');
-});
-
-// Enable foreign key constraints
-db.run('PRAGMA foreign_keys = ON');
+// Single shared connection (backend/database.db) - see config/database.js
+const { db } = require('../config/database');
 
 const generateRandomCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
