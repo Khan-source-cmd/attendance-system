@@ -71,6 +71,150 @@ db.serialize(() => {
     )
   `);
   db.run(`CREATE INDEX IF NOT EXISTS idx_audit_logs_digital_id ON audit_logs (digital_id)`);
+
+  // ---- Sector-specific operational tables (replace all mock/demo data) ----
+  const sectorTables = `
+    CREATE TABLE IF NOT EXISTS production_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT 'Idle',
+      efficiency INTEGER DEFAULT 0,
+      output INTEGER DEFAULT 0,
+      workers INTEGER DEFAULT 0,
+      target_output INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS equipment (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT 'Operational',
+      location TEXT,
+      last_maintenance TEXT,
+      next_maintenance TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS safety_areas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT 'Compliant',
+      last_inspection TEXT,
+      next_due TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS store_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      current_value TEXT,
+      target_value TEXT,
+      percentage INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'success',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS inventory_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      current_qty INTEGER DEFAULT 0,
+      minimum INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'good',
+      supplier TEXT,
+      last_restocked TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS staff_schedules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      employee_name TEXT NOT NULL,
+      position TEXT,
+      date TEXT,
+      start_time TEXT,
+      end_time TEXT,
+      hours INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'Scheduled',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS projects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT 'Planning',
+      progress INTEGER DEFAULT 0,
+      deadline TEXT,
+      team TEXT,
+      members INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS meeting_rooms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      capacity INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'Available',
+      next_booking TEXT,
+      current_meeting TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS public_services (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      today_count INTEGER DEFAULT 0,
+      avg_wait_time TEXT,
+      satisfaction INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS compliance_areas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT 'Compliant',
+      last_audit TEXT,
+      next_due TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS shifts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      person_name TEXT NOT NULL,
+      department TEXT,
+      position TEXT,
+      date TEXT,
+      start_time TEXT,
+      end_time TEXT,
+      hours INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'Scheduled',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+    CREATE TABLE IF NOT EXISTS patients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      room TEXT,
+      doctor TEXT,
+      department TEXT,
+      status TEXT DEFAULT 'stable',
+      last_visit TEXT,
+      next_appointment TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
+  `;
+  sectorTables.split(';').filter(s => s.trim()).forEach(stmt => db.run(stmt));
 });
 
 module.exports = { db, dbFile };

@@ -3040,116 +3040,77 @@ router.delete('/organization-codes/:id', authenticateToken, requireAdmin, (req, 
 
 // ========== INDUSTRY-SPECIFIC ENDPOINTS ========== */
 
-// Manufacturing Production Monitoring
+// Manufacturing Production Monitoring (real, org-scoped data)
 router.get('/production', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  // Mock production line data - in real implementation, this would come from a production_lines table
-  const mockProductionLines = [
-    {
-      id: 1,
-      name: 'Assembly Line A',
-      status: 'Running',
-      efficiency: 95,
-      output: 245,
-      workers: 12,
-      target_output: 250
-    },
-    {
-      id: 2,
-      name: 'Quality Control',
-      status: 'Running',
-      efficiency: 98,
-      output: 180,
-      workers: 8,
-      target_output: 185
-    },
-    {
-      id: 3,
-      name: 'Packaging Line',
-      status: 'Maintenance',
-      efficiency: 0,
-      output: 0,
-      workers: 6,
-      target_output: 200
-    },
-    {
-      id: 4,
-      name: 'Raw Materials',
-      status: 'Idle',
-      efficiency: 0,
-      output: 0,
-      workers: 4,
-      target_output: 150
+  req.db.all(`
+    SELECT id, name, status, efficiency, output, workers, target_output, created_at
+    FROM production_lines WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, lines) => {
+    if (err) {
+      console.error("  Production fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch production data" });
     }
-  ];
 
-  console.log(` Manufacturing production data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    lines: mockProductionLines.concat(extraProductionLines)
+    console.log(` Manufacturing production data fetched for organization ${organizationId} (${lines.length} lines)`);
+    res.json({
+      success: true,
+      lines: lines.map(l => ({
+        id: l.id,
+        name: l.name,
+        status: l.status,
+        efficiency: l.efficiency,
+        output: l.output,
+        workers: l.workers,
+        target_output: l.target_output
+      }))
+    });
   });
 });
 
-// Manufacturing Equipment Management
+// Manufacturing Equipment Management (real, org-scoped data)
 router.get('/equipment', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  // Mock equipment data
-  const mockEquipment = [
-    {
-      id: 1,
-      name: 'Assembly Line A',
-      status: 'Operational',
-      location: 'Main Floor',
-      lastMaintenance: '2024-09-15',
-      nextMaintenance: '2024-12-15'
-    },
-    {
-      id: 2,
-      name: 'Quality Control Station',
-      status: 'Operational',
-      location: 'QC Room',
-      lastMaintenance: '2024-08-20',
-      nextMaintenance: '2024-11-20'
-    },
-    {
-      id: 3,
-      name: 'Packaging Machine',
-      status: 'Needs Attention',
-      location: 'Packaging Area',
-      lastMaintenance: '2024-07-10',
-      nextMaintenance: '2024-10-10'
+  req.db.all(`
+    SELECT id, name, status, location, last_maintenance AS lastMaintenance,
+           next_maintenance AS nextMaintenance
+    FROM equipment WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, equipment) => {
+    if (err) {
+      console.error("  Equipment fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch equipment data" });
     }
-  ];
 
-  console.log(` Manufacturing equipment data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    equipment: mockEquipment
+    console.log(` Manufacturing equipment data fetched for organization ${organizationId} (${equipment.length} items)`);
+    res.json({ success: true, equipment });
   });
 });
 
-// Manufacturing Safety Compliance
+// Manufacturing Safety Compliance (real, org-scoped data)
 router.get('/safety', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const safetyData = {
-    overall: 95,
-    current: 97,
-    target: 95,
-    areas: [
-      { name: 'PPE Compliance', status: 'Compliant', lastInspection: '2024-09-15', nextDue: '2025-03-15' },
-      { name: 'Emergency Exits', status: 'Compliant', lastInspection: '2024-08-20', nextDue: '2025-02-20' },
-      { name: 'Fire Safety', status: 'Review Needed', lastInspection: '2024-07-10', nextDue: '2025-01-10' },
-      { name: 'Machine Guarding', status: 'Compliant', lastInspection: '2024-10-01', nextDue: '2025-04-01' }
-    ]
-  };
+  req.db.all(`
+    SELECT id, name, status, last_inspection AS lastInspection, next_due AS nextDue
+    FROM safety_areas WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, areas) => {
+    if (err) {
+      console.error("  Safety fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch safety data" });
+    }
 
-  console.log(` Manufacturing safety data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    safetyData
+    const compliant = areas.filter(a => a.status === 'Compliant').length;
+    const safetyData = {
+      overall: areas.length ? Math.round((compliant / areas.length) * 100) : 0,
+      current: areas.length ? Math.round((compliant / areas.length) * 100) : 0,
+      target: 95,
+      areas
+    };
+
+    console.log(` Manufacturing safety data fetched for organization ${organizationId} (${areas.length} areas)`);
+    res.json({ success: true, safetyData });
   });
 });
 
@@ -3288,483 +3249,452 @@ router.get('/compliance/report', authenticateToken, requireAdmin, (req, res) => 
   });
 });
 
-// In-memory production lines added via /production/lines (persisted per process)
-const extraProductionLines = [];
+// In-memory production lines removed — data lives in the production_lines table.
+// Generic sector-resource creator: POST /api/admin/<path> inserts an org-scoped row.
+const sectorResource = (path, table, fields) => {
+  router.post(path, authenticateToken, requireAdmin, (req, res) => {
+    const organizationId = req.user.organization_id;
+    const values = fields.map(f => req.body?.[f] ?? null);
+    req.db.run(
+      `INSERT INTO ${table} (organization_id, ${fields.join(', ')}) VALUES (${fields.map(() => '?').join(', ')}, ?)`,
+      [organizationId, ...values],
+      function (err) {
+        if (err) {
+          console.error(`  ${table} insert error:`, err);
+          return res.status(500).json({ success: false, message: "Failed to create record" });
+        }
+        console.log(`  ${table} record created (id ${this.lastID}) for org ${organizationId}`);
+        res.json({ success: true, message: "Record created successfully", id: this.lastID });
+      }
+    );
+  });
+};
 
-router.post('/production/lines', authenticateToken, requireAdmin, (req, res) => {
-  const { name, status, efficiency, output, workers, target_output } = req.body || {};
-  if (!name) {
-    return res.status(400).json({ success: false, message: "Line name is required" });
-  }
-  const line = {
-    id: Date.now(),
-    name,
-    status: status || 'Running',
-    efficiency: Number(efficiency) || 0,
-    output: Number(output) || 0,
-    workers: Number(workers) || 0,
-    target_output: Number(target_output) || 0
-  };
-  extraProductionLines.push(line);
-  console.log(`  Production line added: ${line.name} for org ${req.user.organization_id}`);
-  res.json({ success: true, message: "Production line added successfully", line });
-});
+sectorResource('/production/lines', 'production_lines', ['name', 'status', 'efficiency', 'output', 'workers', 'target_output']);
+sectorResource('/equipment', 'equipment', ['name', 'status', 'location', 'last_maintenance', 'next_maintenance']);
+sectorResource('/safety', 'safety_areas', ['name', 'status', 'last_inspection', 'next_due']);
+sectorResource('/store-performance/metrics', 'store_metrics', ['name', 'current_value', 'target_value', 'percentage', 'status']);
+sectorResource('/inventory/items', 'inventory_items', ['name', 'current_qty', 'minimum', 'status', 'supplier', 'last_restocked']);
+sectorResource('/staff-scheduling/shifts', 'shifts', ['person_name', 'department', 'position', 'date', 'start_time', 'end_time', 'hours', 'status']);
+sectorResource('/projects', 'projects', ['name', 'status', 'progress', 'deadline', 'team', 'members']);
+sectorResource('/meeting-rooms', 'meeting_rooms', ['name', 'capacity', 'status', 'next_booking', 'current_meeting']);
+sectorResource('/public-service', 'public_services', ['name', 'today_count', 'avg_wait_time', 'satisfaction']);
+sectorResource('/compliance/areas', 'compliance_areas', ['name', 'status', 'last_audit', 'next_due']);
+sectorResource('/shift-scheduling/shifts', 'shifts', ['person_name', 'department', 'position', 'date', 'start_time', 'end_time', 'hours', 'status']);
+sectorResource('/patients', 'patients', ['name', 'room', 'doctor', 'department', 'status', 'last_visit', 'next_appointment']);
 
 router.post('/safety/audit', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
-  console.log(`  Safety audit completed for org ${organizationId}`);
-  res.json({
-    success: true,
-    message: "Safety audit completed successfully",
-    audit: {
-      areas_checked: 4,
-      compliant_areas: 3,
-      review_needed: 1,
-      overall_score: 95,
-      audited_at: new Date().toISOString()
+
+  req.db.all(`SELECT status FROM safety_areas WHERE organization_id = ?`, [organizationId], (err, areas) => {
+    if (err) {
+      console.error("  Safety audit error:", err);
+      return res.status(500).json({ success: false, message: "Safety audit failed" });
     }
+    const compliant = areas.filter(a => a.status === 'Compliant').length;
+    console.log(`  Safety audit completed for org ${organizationId}`);
+    res.json({
+      success: true,
+      message: "Safety audit completed successfully",
+      audit: {
+        areas_checked: areas.length,
+        compliant_areas: compliant,
+        review_needed: areas.length - compliant,
+        overall_score: areas.length ? Math.round((compliant / areas.length) * 100) : 0,
+        audited_at: new Date().toISOString()
+      }
+    });
   });
 });
 
 router.get('/safety/report', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
-  const areas = [
-    { name: 'PPE Compliance', status: 'Compliant', lastInspection: '2024-09-15', nextDue: '2025-03-15' },
-    { name: 'Emergency Exits', status: 'Compliant', lastInspection: '2024-08-20', nextDue: '2025-02-20' },
-    { name: 'Fire Safety', status: 'Review Needed', lastInspection: '2024-07-10', nextDue: '2025-01-10' },
-    { name: 'Machine Guarding', status: 'Compliant', lastInspection: '2024-10-01', nextDue: '2025-04-01' }
-  ];
-  console.log(`  Safety report generated for org ${organizationId}`);
-  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const csv = 'Area,Status,Last Inspection,Next Due\n' +
-    areas.map(a => [a.name, a.status, a.lastInspection, a.nextDue].map(cell).join(',')).join('\n');
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="safety_report.csv"');
-  res.send(csv);
+
+  req.db.all(`
+    SELECT name, status, last_inspection AS lastInspection, next_due AS nextDue
+    FROM safety_areas WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, areas) => {
+    if (err) {
+      console.error("  Safety report error:", err);
+      return res.status(500).json({ success: false, message: "Failed to generate safety report" });
+    }
+    console.log(`  Safety report generated for org ${organizationId}`);
+    const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = 'Area,Status,Last Inspection,Next Due\n' +
+      areas.map(a => [a.name, a.status, a.lastInspection, a.nextDue].map(cell).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="safety_report.csv"');
+    res.send(csv);
+  });
 });
 
-// Retail Store Performance
+// Retail Store Performance (real, org-scoped data)
 router.get('/store-performance', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockMetrics = [
-    {
-      id: 1,
-      name: 'Daily Sales Target',
-      current: '$2,450',
-      target: '$3,000',
-      percentage: 82,
-      status: 'warning'
-    },
-    {
-      id: 2,
-      name: 'Customer Satisfaction',
-      current: '4.6/5',
-      target: '4.8/5',
-      percentage: 96,
-      status: 'success'
-    },
-    {
-      id: 3,
-      name: 'Staff Productivity',
-      current: '87%',
-      target: '90%',
-      percentage: 97,
-      status: 'success'
-    },
-    {
-      id: 4,
-      name: 'Inventory Turnover',
-      current: '12 days',
-      target: '10 days',
-      percentage: 83,
-      status: 'warning'
+  req.db.all(`
+    SELECT id, name, current_value AS current, target_value AS target, percentage, status
+    FROM store_metrics WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, metrics) => {
+    if (err) {
+      console.error("  Store performance fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch store performance" });
     }
-  ];
 
-  console.log(` Retail store performance data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    metrics: mockMetrics
+    console.log(` Retail store performance data fetched for organization ${organizationId} (${metrics.length} metrics)`);
+    res.json({ success: true, metrics });
   });
 });
 
-// Retail Sales Analytics
+// Retail Sales Analytics (honest real summary — computed from actual org data)
 router.get('/sales-analytics', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const analyticsData = {
-    todaySales: '$2,450',
-    yesterdaySales: '$2,890',
-    weekSales: '$18,450',
-    monthSales: '$72,300',
-    growth: -15.3,
-    avgTransaction: '$45.67',
-    topProducts: [
-      { name: 'Product A', units: 45, revenue: '$1,350', percentage: 18 },
-      { name: 'Product B', units: 32, revenue: '$960', percentage: 15 },
-      { name: 'Product C', units: 28, revenue: '$840', percentage: 13 }
-    ]
-  };
+  req.db.get(`
+    SELECT (SELECT COUNT(*) FROM users WHERE organization_id = ? AND is_active = 1) AS active_staff,
+           (SELECT COUNT(*) FROM attendance WHERE organization_id = ? AND DATE(timestamp) = DATE('now')) AS punches_today,
+           (SELECT COUNT(*) FROM attendance WHERE organization_id = ? AND DATE(timestamp) >= DATE('now','-7 days')) AS punches_week
+  `, [organizationId, organizationId, organizationId], (err, row) => {
+    if (err) {
+      console.error("  Sales analytics error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch sales analytics" });
+    }
 
-  console.log(` Retail sales analytics data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    analyticsData
+    console.log(` Retail sales analytics fetched for organization ${organizationId}`);
+    res.json({
+      success: true,
+      analyticsData: {
+        todaySales: null,
+        yesterdaySales: null,
+        weekSales: null,
+        monthSales: null,
+        growth: 0,
+        avgTransaction: null,
+        topProducts: [],
+        activeStaff: row.active_staff,
+        staffPunchesToday: row.punches_today,
+        staffPunchesWeek: row.punches_week,
+        note: 'No sales transaction data recorded yet. Connect a POS system or record sales to populate revenue figures.'
+      }
+    });
   });
 });
 
-// Retail Inventory Management
+// Retail Sales Analytics CSV report/export (real staff-activity summary)
+const salesAnalyticsCsv = (organizationId, db, cb) => {
+  db.all(`
+    SELECT u.digital_id, u.name, u.role,
+           COUNT(a.id) AS punches_30d,
+           SUM(CASE WHEN DATE(a.timestamp) = DATE('now') THEN 1 ELSE 0 END) AS punches_today
+    FROM users u
+    LEFT JOIN attendance a ON a.digital_id = u.digital_id AND DATE(a.timestamp) >= DATE('now','-30 days')
+    WHERE u.organization_id = ?
+    GROUP BY u.digital_id ORDER BY punches_30d DESC
+  `, [organizationId], cb);
+};
+
+router.get('/sales-analytics/report', authenticateToken, requireAdmin, (req, res) => {
+  salesAnalyticsCsv(req.user.organization_id, req.db, (err, rows) => {
+    if (err) {
+      console.error("  Sales analytics report error:", err);
+      return res.status(500).json({ success: false, message: "Failed to generate sales analytics report" });
+    }
+    const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = 'Digital ID,Name,Role,Punches (30d),Punches Today\n' +
+      rows.map(r => [r.digital_id, r.name, r.role, r.punches_30d, r.punches_today].map(cell).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="sales_analytics_report.csv"');
+    res.send(csv);
+  });
+});
+
+router.get('/sales-analytics/export', authenticateToken, requireAdmin, (req, res) => {
+  salesAnalyticsCsv(req.user.organization_id, req.db, (err, rows) => {
+    if (err) {
+      console.error("  Sales analytics export error:", err);
+      return res.status(500).json({ success: false, message: "Failed to export sales analytics" });
+    }
+    const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = 'Digital ID,Name,Role,Punches (30d),Punches Today\n' +
+      rows.map(r => [r.digital_id, r.name, r.role, r.punches_30d, r.punches_today].map(cell).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="sales_analytics_export.csv"');
+    res.send(csv);
+  });
+});
+
+// Retail Inventory Management (real, org-scoped data)
 router.get('/inventory', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockItems = [
-    {
-      id: 1,
-      name: 'Product A',
-      current: 45,
-      minimum: 50,
-      status: 'low',
-      supplier: 'Supplier X',
-      lastRestocked: '2024-09-20'
-    },
-    {
-      id: 2,
-      name: 'Product B',
-      current: 120,
-      minimum: 100,
-      status: 'good',
-      supplier: 'Supplier Y',
-      lastRestocked: '2024-09-18'
-    },
-    {
-      id: 3,
-      name: 'Product C',
-      current: 25,
-      minimum: 30,
-      status: 'low',
-      supplier: 'Supplier Z',
-      lastRestocked: '2024-09-15'
+  req.db.all(`
+    SELECT id, name, current_qty AS current, minimum, status, supplier,
+           last_restocked AS lastRestocked
+    FROM inventory_items WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, items) => {
+    if (err) {
+      console.error("  Inventory fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch inventory" });
     }
-  ];
 
-  console.log(` Retail inventory data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    items: mockItems
+    console.log(` Retail inventory data fetched for organization ${organizationId} (${items.length} items)`);
+    res.json({ success: true, items });
   });
 });
 
-// Retail Staff Scheduling
+// Retail Staff Scheduling (real, org-scoped data — shared shifts table)
 router.get('/staff-scheduling', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockSchedule = [
-    {
-      id: 1,
-      employeeName: 'John Doe',
-      position: 'Cashier',
-      date: '2024-10-02',
-      startTime: '09:00',
-      endTime: '17:00',
-      hours: 8,
-      status: 'Scheduled'
-    },
-    {
-      id: 2,
-      employeeName: 'Jane Smith',
-      position: 'Sales Associate',
-      date: '2024-10-02',
-      startTime: '10:00',
-      endTime: '18:00',
-      hours: 8,
-      status: 'Scheduled'
+  req.db.all(`
+    SELECT id, person_name AS employeeName, position, date,
+           start_time AS startTime, end_time AS endTime, hours, status
+    FROM shifts WHERE organization_id = ? ORDER BY date ASC, id ASC
+  `, [organizationId], (err, schedule) => {
+    if (err) {
+      console.error("  Staff scheduling fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch staff schedule" });
     }
-  ];
 
-  console.log(` Retail staff scheduling data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    schedule: mockSchedule
+    console.log(` Retail staff scheduling data fetched for organization ${organizationId} (${schedule.length} entries)`);
+    res.json({ success: true, schedule });
   });
 });
 
-// Corporate Project Management
+// Corporate Project Management (real, org-scoped data)
 router.get('/projects', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockProjects = [
-    {
-      id: 1,
-      name: 'Q4 Marketing Campaign',
-      status: 'In Progress',
-      progress: 75,
-      deadline: 'Dec 31, 2024',
-      team: 'Marketing Team',
-      members: 8
-    },
-    {
-      id: 2,
-      name: 'Product Launch Strategy',
-      status: 'Planning',
-      progress: 30,
-      deadline: 'Jan 15, 2025',
-      team: 'Product Team',
-      members: 12
-    },
-    {
-      id: 3,
-      name: 'HR System Upgrade',
-      status: 'Review',
-      progress: 90,
-      deadline: 'Nov 15, 2024',
-      team: 'HR & IT',
-      members: 6
+  req.db.all(`
+    SELECT id, name, status, progress, deadline, team, members
+    FROM projects WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, projects) => {
+    if (err) {
+      console.error("  Projects fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch projects" });
     }
-  ];
 
-  console.log(` Corporate projects data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    projects: mockProjects
+    console.log(` Corporate projects data fetched for organization ${organizationId} (${projects.length} projects)`);
+    res.json({ success: true, projects });
   });
 });
 
-// Corporate Productivity Analytics
+// Corporate Productivity Analytics (real — computed from org attendance)
 router.get('/productivity', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const productivityData = {
-    overall: 85,
-    today: 92,
-    week: 88,
-    insights: [
-      { team: 'Engineering', productivity: 92, trend: 'up', topPerformer: 'Alice Johnson' },
-      { team: 'Marketing', productivity: 88, trend: 'up', topPerformer: 'Bob Smith' },
-      { team: 'Sales', productivity: 76, trend: 'down', topPerformer: 'Carol Davis' }
-    ]
-  };
+  req.db.get(`
+    SELECT (SELECT COUNT(*) FROM users WHERE organization_id = ? AND is_active = 1) AS active_users,
+           (SELECT COUNT(DISTINCT digital_id) FROM attendance WHERE organization_id = ? AND DATE(timestamp) = DATE('now')) AS engaged_today,
+           (SELECT COUNT(DISTINCT digital_id) FROM attendance WHERE organization_id = ? AND DATE(timestamp) >= DATE('now','-7 days')) AS engaged_week,
+           (SELECT COUNT(DISTINCT digital_id) FROM attendance WHERE organization_id = ? AND DATE(timestamp) >= DATE('now','-30 days')) AS engaged_month
+  `, [organizationId, organizationId, organizationId, organizationId], (err, row) => {
+    if (err) {
+      console.error("  Productivity fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch productivity data" });
+    }
 
-  console.log(` Corporate productivity data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    productivityData
+    const pct = (engaged, base) => base ? Math.round((engaged / base) * 100) : 0;
+    const productivityData = {
+      overall: pct(row.engaged_month, row.active_users),
+      today: pct(row.engaged_today, row.active_users),
+      week: pct(row.engaged_week, row.active_users),
+      insights: [],
+      activeUsers: row.active_users,
+      engagedToday: row.engaged_today,
+      engagedWeek: row.engaged_week
+    };
+
+    console.log(` Corporate productivity data computed for organization ${organizationId}`);
+    res.json({ success: true, productivityData });
   });
 });
 
-// Corporate Meeting Rooms
+// Corporate Meeting Rooms (real, org-scoped data)
 router.get('/meeting-rooms', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockRooms = [
-    {
-      id: 1,
-      name: 'Conference Room A',
-      capacity: 12,
-      status: 'Available',
-      nextBooking: '2:00 PM - 3:30 PM'
-    },
-    {
-      id: 2,
-      name: 'Board Room',
-      capacity: 20,
-      status: 'Occupied',
-      currentMeeting: 'Executive Meeting'
-    },
-    {
-      id: 3,
-      name: 'Meeting Room 1',
-      capacity: 6,
-      status: 'Available',
-      nextBooking: '4:00 PM - 5:00 PM'
+  req.db.all(`
+    SELECT id, name, capacity, status, next_booking AS nextBooking,
+           current_meeting AS currentMeeting
+    FROM meeting_rooms WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, rooms) => {
+    if (err) {
+      console.error("  Meeting rooms fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch meeting rooms" });
     }
-  ];
 
-  console.log(` Corporate meeting rooms data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    rooms: mockRooms
+    console.log(` Corporate meeting rooms data fetched for organization ${organizationId} (${rooms.length} rooms)`);
+    res.json({ success: true, rooms });
   });
 });
 
-// Government Public Service
+// Government Public Service (real, org-scoped data)
 router.get('/public-service', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockServices = [
-    {
-      id: 1,
-      name: 'Citizen Services',
-      todayCount: 145,
-      avgWaitTime: '12 min',
-      satisfaction: 94
-    },
-    {
-      id: 2,
-      name: 'Permit Applications',
-      todayCount: 67,
-      avgWaitTime: '25 min',
-      satisfaction: 87
-    },
-    {
-      id: 3,
-      name: 'Information Desk',
-      todayCount: 203,
-      avgWaitTime: '8 min',
-      satisfaction: 96
+  req.db.all(`
+    SELECT id, name, today_count AS todayCount, avg_wait_time AS avgWaitTime,
+           satisfaction
+    FROM public_services WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, services) => {
+    if (err) {
+      console.error("  Public service fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch public service data" });
     }
-  ];
 
-  console.log(` Government public service data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    services: mockServices
+    console.log(` Government public service data fetched for organization ${organizationId} (${services.length} services)`);
+    res.json({ success: true, services });
   });
 });
 
-// Government Compliance
+// Government Compliance (real, org-scoped data — shared compliance_areas table)
 router.get('/compliance', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const complianceData = {
-    overall: 96,
-    current: 98,
-    target: 95,
-    areas: [
-      { name: 'Data Privacy (GDPR)', status: 'Compliant', lastAudit: '2024-09-15', nextDue: '2025-09-15' },
-      { name: 'Accessibility (ADA)', status: 'Compliant', lastAudit: '2024-08-20', nextDue: '2025-08-20' },
-      { name: 'Security Protocols', status: 'Compliant', lastAudit: '2024-10-01', nextDue: '2025-10-01' }
-    ]
-  };
+  req.db.all(`
+    SELECT id, name, status, last_audit AS lastAudit, next_due AS nextDue
+    FROM compliance_areas WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, areas) => {
+    if (err) {
+      console.error("  Compliance fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch compliance data" });
+    }
 
-  console.log(` Government compliance data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    complianceData
+    req.db.get(`
+      SELECT (SELECT COUNT(*) FROM users WHERE organization_id = ?) AS total_users,
+             (SELECT COUNT(*) FROM users WHERE organization_id = ? AND is_verified = 1) AS verified_users
+    `, [organizationId, organizationId], (err2, u) => {
+      if (err2) {
+        console.error("  Compliance user stats error:", err2);
+        return res.status(500).json({ success: false, message: "Failed to fetch compliance data" });
+      }
+
+      const compliant = areas.filter(a => a.status === 'Compliant').length;
+      const complianceData = {
+        overall: areas.length ? Math.round((compliant / areas.length) * 100) : 0,
+        current: u.total_users ? Math.round((u.verified_users / u.total_users) * 100) : 0,
+        target: 95,
+        areas,
+        verifiedUsers: u.verified_users,
+        totalUsers: u.total_users
+      };
+
+      console.log(` Government compliance data fetched for organization ${organizationId} (${areas.length} areas)`);
+      res.json({ success: true, complianceData });
+    });
   });
 });
 
-// Government Departments
+// Government Departments (real, org-scoped data — uses existing departments table)
 router.get('/departments', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockDepartments = [
-    {
-      id: 1,
-      name: 'Public Administration',
-      employees: 45,
-      status: 'Active',
-      budget: '$2.3M',
-      performance: 92
-    },
-    {
-      id: 2,
-      name: 'Citizen Services',
-      employees: 32,
-      status: 'Active',
-      budget: '$1.8M',
-      performance: 96
-    },
-    {
-      id: 3,
-      name: 'Regulatory Compliance',
-      employees: 28,
-      status: 'Active',
-      budget: '$1.5M',
-      performance: 89
+  req.db.all(`
+    SELECT d.id, d.name, d.type, d.location, d.is_active,
+           (SELECT COUNT(*) FROM users u WHERE u.organization_id = d.organization_id AND u.is_active = 1) AS employees
+    FROM departments d
+    WHERE d.organization_id = ? AND d.is_active = 1
+    ORDER BY d.id ASC
+  `, [organizationId], (err, departments) => {
+    if (err) {
+      console.error("  Departments fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch departments" });
     }
-  ];
 
-  console.log(` Government departments data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    departments: mockDepartments
+    console.log(` Government departments data fetched for organization ${organizationId} (${departments.length} departments)`);
+    res.json({
+      success: true,
+      departments: departments.map(d => ({
+        id: d.id,
+        name: d.name,
+        employees: d.employees,
+        status: d.is_active ? 'Active' : 'Inactive',
+        budget: null,
+        performance: null,
+        type: d.type,
+        location: d.location
+      }))
+    });
   });
 });
 
-// Healthcare Shift Scheduling
+// Healthcare Shift Scheduling (real, org-scoped data — shared shifts table)
 router.get('/shift-scheduling', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockShifts = [
-    {
-      id: 1,
-      staffName: 'Dr. Sarah Johnson',
-      department: 'Emergency',
-      date: '2024-10-02',
-      startTime: '08:00',
-      endTime: '16:00',
-      hours: 8,
-      status: 'Scheduled'
-    },
-    {
-      id: 2,
-      staffName: 'Nurse Mike Chen',
-      department: 'ICU',
-      date: '2024-10-02',
-      startTime: '16:00',
-      endTime: '00:00',
-      hours: 8,
-      status: 'Scheduled'
+  req.db.all(`
+    SELECT id, person_name AS staffName, department, date,
+           start_time AS startTime, end_time AS endTime, hours, status
+    FROM shifts WHERE organization_id = ? ORDER BY date ASC, id ASC
+  `, [organizationId], (err, shifts) => {
+    if (err) {
+      console.error("  Shift scheduling fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch shift schedule" });
     }
-  ];
 
-  console.log(` Healthcare shift scheduling data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    shifts: mockShifts
+    console.log(` Healthcare shift scheduling data fetched for organization ${organizationId} (${shifts.length} shifts)`);
+    res.json({ success: true, shifts });
   });
 });
 
-// Healthcare Compliance (different from government compliance)
+// Healthcare Compliance (real, org-scoped data — shared compliance_areas table)
 router.get('/healthcare-compliance', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const complianceData = {
-    overall: 97,
-    current: 98,
-    target: 95,
-    areas: [
-      { name: 'HIPAA Compliance', status: 'Compliant', lastAudit: '2024-09-15', nextDue: '2025-09-15' },
-      { name: 'Patient Safety', status: 'Compliant', lastAudit: '2024-08-20', nextDue: '2025-08-20' },
-      { name: 'Medical Records', status: 'Compliant', lastAudit: '2024-10-01', nextDue: '2025-10-01' }
-    ]
-  };
+  req.db.all(`
+    SELECT id, name, status, last_audit AS lastAudit, next_due AS nextDue
+    FROM compliance_areas WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, areas) => {
+    if (err) {
+      console.error("  Healthcare compliance fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch compliance data" });
+    }
 
-  console.log(` Healthcare compliance data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    complianceData
+    req.db.get(`
+      SELECT (SELECT COUNT(*) FROM users WHERE organization_id = ?) AS total_users,
+             (SELECT COUNT(*) FROM users WHERE organization_id = ? AND is_verified = 1) AS verified_users,
+             (SELECT COUNT(*) FROM patients WHERE organization_id = ?) AS total_patients
+    `, [organizationId, organizationId, organizationId], (err2, u) => {
+      if (err2) {
+        console.error("  Healthcare compliance stats error:", err2);
+        return res.status(500).json({ success: false, message: "Failed to fetch compliance data" });
+      }
+
+      const compliant = areas.filter(a => a.status === 'Compliant').length;
+      const complianceData = {
+        overall: areas.length ? Math.round((compliant / areas.length) * 100) : 0,
+        current: u.total_users ? Math.round((u.verified_users / u.total_users) * 100) : 0,
+        target: 95,
+        areas,
+        checks: [],
+        verifiedUsers: u.verified_users,
+        totalUsers: u.total_users,
+        totalPatients: u.total_patients
+      };
+
+      console.log(` Healthcare compliance data fetched for organization ${organizationId} (${areas.length} areas)`);
+      res.json({ success: true, complianceData });
+    });
   });
 });
 
-// Healthcare Patient Management
+// Healthcare Patient Management (real, org-scoped data)
 router.get('/patient-management', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockPatients = [
-    {
-      id: 1,
-      name: 'John Doe',
-      department: 'Cardiology',
-      status: 'Admitted',
-      lastVisit: '2024-10-01',
-      nextAppointment: '2024-10-15'
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      department: 'Pediatrics',
-      status: 'Outpatient',
-      lastVisit: '2024-09-28',
-      nextAppointment: '2024-10-12'
+  req.db.all(`
+    SELECT id, name, room, doctor, department, status,
+           last_visit AS lastVisit, next_appointment AS nextAppointment
+    FROM patients WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, patients) => {
+    if (err) {
+      console.error("  Patient management fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch patient data" });
     }
-  ];
 
-  console.log(` Healthcare patient management data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    patients: mockPatients
+    console.log(` Healthcare patient management data fetched for organization ${organizationId} (${patients.length} patients)`);
+    res.json({ success: true, patients });
   });
 });
 
@@ -3809,49 +3739,6 @@ router.get('/staff', authenticateToken, requireAdmin, (req, res) => {
 
     console.log(` Healthcare staff fetched ${staff.length} members`);
 
-    // If no staff found, provide some mock data for testing
-    if (staff.length === 0) {
-      console.log('⚠️ No staff found, providing mock data for testing');
-      const mockStaff = [
-        {
-          digital_id: 'DOC001',
-          name: 'Dr. Sarah Johnson',
-          role: 'Physician',
-          email: 'sarah.johnson@hospital.com',
-          phone: '+1-555-0101',
-          industry_type: 'healthcare',
-          is_active: 1,
-          department: 'Emergency Department'
-        },
-        {
-          digital_id: 'NUR001',
-          name: 'Nurse Michael Chen',
-          role: 'Registered Nurse',
-          email: 'michael.chen@hospital.com',
-          phone: '+1-555-0102',
-          industry_type: 'healthcare',
-          is_active: 1,
-          department: 'ICU'
-        },
-        {
-          digital_id: 'DOC002',
-          name: 'Dr. Emily Rodriguez',
-          role: 'Pediatrician',
-          email: 'emily.rodriguez@hospital.com',
-          phone: '+1-555-0103',
-          industry_type: 'healthcare',
-          is_active: 1,
-          department: 'Pediatrics'
-        }
-      ];
-
-      return res.json({
-        success: true,
-        staff: mockStaff,
-        note: 'Mock data provided - no real staff found in database'
-      });
-    }
-
     res.json({
       success: true,
       staff: staff
@@ -3859,125 +3746,41 @@ router.get('/staff', authenticateToken, requireAdmin, (req, res) => {
   });
 });
 
-// Healthcare Shifts Management
+// Healthcare Shifts Management (real, org-scoped data — shared shifts table)
 router.get('/shifts', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  // Mock shift data - in real implementation, this would come from a shifts table
-  const mockShifts = [
-    {
-      id: 1,
-      staffName: 'Dr. Sarah Johnson',
-      staffId: 'DOC001',
-      department: 'Emergency Department',
-      date: '2024-10-02',
-      startTime: '08:00',
-      endTime: '16:00',
-      hours: 8,
-      status: 'scheduled',
-      role: 'Physician'
-    },
-    {
-      id: 2,
-      staffName: 'Nurse Michael Chen',
-      staffId: 'NUR001',
-      department: 'ICU',
-      date: '2024-10-02',
-      startTime: '16:00',
-      endTime: '00:00',
-      hours: 8,
-      status: 'scheduled',
-      role: 'Registered Nurse'
-    },
-    {
-      id: 3,
-      staffName: 'Dr. Emily Rodriguez',
-      staffId: 'DOC002',
-      department: 'Pediatrics',
-      date: '2024-10-02',
-      startTime: '09:00',
-      endTime: '17:00',
-      hours: 8,
-      status: 'active',
-      role: 'Pediatrician'
+  req.db.all(`
+    SELECT id, person_name AS staffName, department, position AS role,
+           date, start_time AS startTime, end_time AS endTime, hours, status
+    FROM shifts WHERE organization_id = ? ORDER BY date ASC, id ASC
+  `, [organizationId], (err, shifts) => {
+    if (err) {
+      console.error("  Shifts fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch shifts" });
     }
-  ];
 
-  console.log(` Healthcare shifts data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    shifts: mockShifts
+    console.log(` Healthcare shifts data fetched for organization ${organizationId} (${shifts.length} shifts)`);
+    res.json({ success: true, shifts });
   });
 });
 
-// Healthcare Compliance (alias for healthcare-compliance)
-router.get('/compliance', authenticateToken, requireAdmin, (req, res) => {
-  const organizationId = req.user.organization_id;
-
-  const complianceData = {
-    overall: 97,
-    current: 98,
-    target: 95,
-    areas: [
-      { name: 'HIPAA Compliance', status: 'Compliant', lastAudit: '2024-09-15', nextDue: '2025-09-15' },
-      { name: 'Patient Safety', status: 'Compliant', lastAudit: '2024-08-20', nextDue: '2025-08-20' },
-      { name: 'Medical Records', status: 'Compliant', lastAudit: '2024-10-01', nextDue: '2025-10-01' }
-    ],
-    checks: [
-      { type: 'Hand Hygiene', result: 'pass', staff: 'Dr. Johnson', time: '2 hours ago' },
-      { type: 'Equipment Sterilization', result: 'pass', staff: 'Nurse Chen', time: '4 hours ago' },
-      { type: 'Patient ID Check', result: 'pass', staff: 'Dr. Rodriguez', time: '6 hours ago' }
-    ]
-  };
-
-  console.log(` Healthcare compliance data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    complianceData
-  });
-});
-
-// Healthcare Patients Management (alias for patient-management)
+// Healthcare Patients (real, org-scoped data — shared patients table)
 router.get('/patients', authenticateToken, requireAdmin, (req, res) => {
   const organizationId = req.user.organization_id;
 
-  const mockPatients = [
-    {
-      id: 1,
-      name: 'John Doe',
-      room: '301',
-      doctor: 'Dr. Sarah Johnson',
-      status: 'stable',
-      department: 'Cardiology',
-      lastVisit: '2024-10-01',
-      nextAppointment: '2024-10-15'
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      room: '205',
-      doctor: 'Dr. Emily Rodriguez',
-      status: 'good',
-      department: 'Pediatrics',
-      lastVisit: '2024-09-28',
-      nextAppointment: '2024-10-12'
-    },
-    {
-      id: 3,
-      name: 'Robert Brown',
-      room: 'ICU-12',
-      doctor: 'Dr. Michael Chen',
-      status: 'critical',
-      department: 'ICU',
-      lastVisit: '2024-10-01',
-      nextAppointment: '2024-10-03'
+  req.db.all(`
+    SELECT id, name, room, doctor, department, status,
+           last_visit AS lastVisit, next_appointment AS nextAppointment
+    FROM patients WHERE organization_id = ? ORDER BY id ASC
+  `, [organizationId], (err, patients) => {
+    if (err) {
+      console.error("  Patients fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch patients" });
     }
-  ];
 
-  console.log(` Healthcare patients data fetched for organization ${organizationId}`);
-  res.json({
-    success: true,
-    patients: mockPatients
+    console.log(` Healthcare patients data fetched for organization ${organizationId} (${patients.length} patients)`);
+    res.json({ success: true, patients });
   });
 });
 
