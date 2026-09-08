@@ -3866,7 +3866,7 @@
 
             try {
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/admin/approve-all-pending-punches`, {
+                const response = await fetch(`${API_BASE}/api/admin/pending-requests/approve-all`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });

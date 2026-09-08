@@ -3008,7 +3008,7 @@
             setTimeout(async () => {
                 try {
                     const token = getAuthToken();
-                    const response = await fetch(`${API_BASE}/api/admin/clear-all-users`, {
+                    const response = await fetch(`${API_BASE}/api/admin/organization/clear-users`, {
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -3196,7 +3196,7 @@
                 console.log('Marking organization setup as deleted:', setupId);
 
                 // Call the soft delete API endpoint (PATCH to mark as deleted)
-                const response = await fetch(`${API_BASE}/api/admin/organization-setup/${setupId}/delete`, {
+                const response = await fetch(`${API_BASE}/api/admin/organization-setup/${setupId}`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -3735,13 +3735,13 @@
                                 <span class="badge bg-${user.status === 'active' ? 'success' : 'warning'}">${user.status || 'active'}</span>
                             </div>
                             <div class="col-md-3">
-                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser('${user.id}')">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser('${user.digital_id}')">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger me-1" onclick="deactivateUser('${user.id}')">
+                                <button class="btn btn-sm btn-outline-danger me-1" onclick="deactivateUser('${user.digital_id}')">
                                     <i class="fas fa-ban"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-info" onclick="viewUserAttendance('${user.id}')">
+                                <button class="btn btn-sm btn-outline-info" onclick="viewUserAttendance('${user.digital_id}')">
                                     <i class="fas fa-clock"></i>
                                 </button>
                             </div>
@@ -3803,10 +3803,28 @@
             showNotification('Edit user functionality coming soon!', 'info');
         }
 
-        function deactivateUser(userId) {
+        async function deactivateUser(digitalId) {
             if (confirm('Are you sure you want to deactivate this staff member?')) {
-                showNotification('Staff member deactivated', 'success');
-                loadUsersList();
+                try {
+                    const token = getAuthToken();
+                    const response = await fetch(`${API_BASE}/api/admin/user-status`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ digital_id: digitalId, is_active: 0 })
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (response.ok && result.success !== false) {
+                        showNotification('Staff member deactivated', 'success');
+                        loadUsersList();
+                    } else {
+                        throw new Error(result.message || 'Failed to deactivate staff member');
+                    }
+                } catch (error) {
+                    showNotification('Failed to deactivate staff member: ' + error.message, 'error');
+                }
             }
         }
 
@@ -4062,7 +4080,7 @@
 
             try {
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/admin/pending-punches`, {
+                const response = await fetch(`${API_BASE}/api/admin/manual-punches`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -4152,7 +4170,7 @@
         async function approvePunch(punchId) {
             try {
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/admin/approve-punch/${punchId}`, {
+                const response = await fetch(`${API_BASE}/api/admin/manual-punches/${punchId}/approve`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -4179,7 +4197,7 @@
 
             try {
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/admin/reject-punch/${punchId}`, {
+                const response = await fetch(`${API_BASE}/api/admin/manual-punches/${punchId}/reject`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -4209,7 +4227,7 @@
 
             try {
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/admin/approve-all-pending`, {
+                const response = await fetch(`${API_BASE}/api/admin/pending-requests/approve-all`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -4451,7 +4469,7 @@
 
                 try {
                     const token = getAuthToken();
-                    const response = await fetch(`${API_BASE}/api/admin/store-performance/metrics`, {
+                    const response = await fetch(`${API_BASE}/api/admin/store-performance`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -4705,7 +4723,7 @@
 
                 try {
                     const token = getAuthToken();
-                    const response = await fetch(`${API_BASE}/api/admin/inventory/items`, {
+                    const response = await fetch(`${API_BASE}/api/admin/inventory`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -4844,7 +4862,7 @@
 
                 try {
                     const token = getAuthToken();
-                    const response = await fetch(`${API_BASE}/api/admin/staff-scheduling/shifts`, {
+                    const response = await fetch(`${API_BASE}/api/admin/staff-scheduling`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,

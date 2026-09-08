@@ -4150,14 +4150,14 @@
                                                     <td>${user.name}</td>
                                                     <td>${user.role}</td>
                                                     <td>${user.department || 'Not assigned'}</td>
-                                                    <td><span class="badge bg-${user.active ? 'success' : 'secondary'}">${user.active ? 'Active' : 'Inactive'}</span></td>
+                                                    <td><span class="badge bg-${user.is_active ? 'success' : 'secondary'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
                                                     <td>${user.lastLogin || 'Never'}</td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser('${user.id}')">
+                                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser('${user.digital_id}')">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <button class="btn btn-sm btn-outline-${user.active ? 'warning' : 'success'}" onclick="toggleUserStatus('${user.id}')">
-                                                            <i class="fas fa-${user.active ? 'ban' : 'check'}"></i>
+                                                        <button class="btn btn-sm btn-outline-${user.is_active ? 'warning' : 'success'}" onclick="toggleUserStatus('${user.digital_id}', ${!user.is_active})">
+                                                            <i class="fas fa-${user.is_active ? 'ban' : 'check'}"></i>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -4413,22 +4413,27 @@
             showNotification('Edit user functionality coming soon!', 'info');
         }
 
-        async function toggleUserStatus(userId) {
+        async function toggleUserStatus(digitalId, newActive) {
             try {
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/admin/users/${userId}/toggle-status`, {
+                const response = await fetch(`${API_BASE}/api/admin/user-status`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ digital_id: digitalId, is_active: newActive ? 1 : 0 })
                 });
 
-                if (response.ok) {
+                const result = await response.json().catch(() => ({}));
+                if (response.ok && result.success !== false) {
                     showNotification('User status updated!', 'success');
                     manageUsers(); // Refresh the list
                 } else {
-                    throw new Error('Failed to update user status');
+                    throw new Error(result.message || 'Failed to update user status');
                 }
             } catch (error) {
-                showNotification('Failed to update user status', 'error');
+                showNotification('Failed to update user status: ' + error.message, 'error');
             }
         }
 

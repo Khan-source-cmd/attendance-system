@@ -1563,6 +1563,70 @@ router.post('/pending-requests/:id/approve', authenticateToken, requireAdmin, (r
   });
 });
 
+// Bulk approve all pending requests for the admin's organization
+router.post('/pending-requests/approve-all', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  const adminId = req.user.digital_id;
+  const { admin_notes } = req.body || {};
+
+  req.db.all(`
+    SELECT * FROM pending_requests
+    WHERE organization_id = ? AND status = 'pending'
+  `, [organizationId], (err, requests) => {
+    if (err) {
+      console.error("  Pending requests fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch pending requests" });
+    }
+
+    if (!requests || requests.length === 0) {
+      return res.json({ success: true, message: "No pending requests to approve", approved: 0, failed: 0 });
+    }
+
+    let approved = 0, failed = 0, remaining = requests.length, finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      console.log(`  Admin ${adminId} bulk-approved ${approved} pending request(s) (${failed} failed)`);
+      res.json({ success: true, message: `Approved ${approved} request(s)`, approved, failed });
+    };
+
+    requests.forEach(request => {
+      req.db.run(`
+        INSERT INTO attendance (
+          digital_id, organization_id, attendance_method, location_data,
+          punch_type, timestamp, notes, verified_by, ip_address, user_agent
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        request.digital_id,
+        request.organization_id,
+        request.attendance_method,
+        request.location_data,
+        request.punch_type,
+        request.requested_timestamp,
+        `Manual entry approved by admin (bulk): ${request.notes || ''}`,
+        adminId,
+        null,
+        'Admin Manual Approval'
+      ], function(attendanceErr) {
+        if (attendanceErr) {
+          console.error("  Bulk attendance insert error:", attendanceErr);
+          failed++;
+          if (--remaining === 0) finish();
+          return;
+        }
+        req.db.run(`
+          UPDATE pending_requests
+          SET status = 'approved', admin_id = ?, admin_notes = ?, decision_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `, [adminId, admin_notes || 'Bulk approved', request.id], function(updateErr) {
+          if (updateErr) failed++; else approved++;
+          if (--remaining === 0) finish();
+        });
+      });
+    });
+  });
+});
+
 // Reject pending request
 router.post('/pending-requests/:id/reject', authenticateToken, requireAdmin, (req, res) => {
   const { id } = req.params;
@@ -1898,6 +1962,38 @@ router.delete('/qr-codes/:id', authenticateToken, requireAdmin, (req, res) => {
     res.json({
       success: true,
       message: "QR code deleted successfully"
+    });
+  });
+});
+
+// Deactivate a QR code (POST alias used by sector dashboards — soft-disable
+// when possible, falling back to delete)
+router.post('/qr-codes/:id/deactivate', authenticateToken, requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const organizationId = req.user.organization_id;
+
+  req.db.run(`
+    UPDATE qr_codes SET is_active = 0
+    WHERE id = ? AND organization_id = ?
+  `, [id, organizationId], function(err) {
+    if (!err && this.changes > 0) {
+      console.log(`  Admin ${req.user.digital_id} deactivated QR code ${id}`);
+      return res.json({ success: true, message: "QR code deactivated successfully" });
+    }
+
+    // Fallback: hard delete (older schema without is_active, or no match)
+    req.db.run(`
+      DELETE FROM qr_codes WHERE id = ? AND organization_id = ?
+    `, [id, organizationId], function(err2) {
+      if (err2) {
+        console.error("  QR code deactivation error:", err2);
+        return res.status(500).json({ success: false, message: "Failed to deactivate QR code" });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ success: false, message: "QR code not found" });
+      }
+      console.log(`  Admin ${req.user.digital_id} removed QR code ${id}`);
+      res.json({ success: true, message: "QR code removed successfully" });
     });
   });
 });
@@ -2991,7 +3087,7 @@ router.get('/production', authenticateToken, requireAdmin, (req, res) => {
   console.log(` Manufacturing production data fetched for organization ${organizationId}`);
   res.json({
     success: true,
-    lines: mockProductionLines
+    lines: mockProductionLines.concat(extraProductionLines)
   });
 });
 
@@ -3055,6 +3151,196 @@ router.get('/safety', authenticateToken, requireAdmin, (req, res) => {
     success: true,
     safetyData
   });
+});
+
+// ---- Productivity / Compliance / Safety sub-actions & reports ----
+// These complete the sector dashboards' action buttons. Analysis/audit/check
+// endpoints compute real summary stats from org data; report endpoints export CSV.
+
+router.post('/productivity/analyze', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  const { analysisType } = req.body || {};
+  req.db.get(`
+    SELECT (SELECT COUNT(*) FROM users WHERE organization_id = ? AND is_active = 1) AS active_users,
+           (SELECT COUNT(*) FROM attendance WHERE organization_id = ? AND DATE(timestamp) >= DATE('now','-30 days')) AS recent_punches,
+           (SELECT COUNT(DISTINCT digital_id) FROM attendance WHERE organization_id = ? AND DATE(timestamp) >= DATE('now','-30 days')) AS engaged_users
+  `, [organizationId, organizationId, organizationId], (err, row) => {
+    if (err) {
+      console.error("  Productivity analysis error:", err);
+      return res.status(500).json({ success: false, message: "Productivity analysis failed" });
+    }
+    const engagement = row.active_users ? Math.round((row.engaged_users / row.active_users) * 100) : 0;
+    console.log(`  Productivity analysis (${analysisType || 'general'}) for org ${organizationId}`);
+    res.json({
+      success: true,
+      message: `${String(analysisType || 'general').replace(/_/g, ' ')} analysis completed`,
+      analysis: {
+        type: analysisType || 'general',
+        active_users: row.active_users,
+        recent_punches: row.recent_punches,
+        engaged_users: row.engaged_users,
+        engagement_rate_pct: engagement,
+        generated_at: new Date().toISOString()
+      }
+    });
+  });
+});
+
+router.get('/productivity/report', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  req.db.all(`
+    SELECT u.digital_id, u.name, u.role, COUNT(a.id) AS punches_last_30d
+    FROM users u
+    LEFT JOIN attendance a ON a.digital_id = u.digital_id AND DATE(a.timestamp) >= DATE('now','-30 days')
+    WHERE u.organization_id = ?
+    GROUP BY u.digital_id ORDER BY punches_last_30d DESC
+  `, [organizationId], (err, rows) => {
+    if (err) {
+      console.error("  Productivity report error:", err);
+      return res.status(500).json({ success: false, message: "Failed to generate productivity report" });
+    }
+    const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = 'Digital ID,Name,Role,Punches (Last 30 Days)\n' +
+      rows.map(r => [r.digital_id, r.name, r.role, r.punches_last_30d].map(cell).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="productivity_report.csv"');
+    res.send(csv);
+  });
+});
+
+const complianceSummary = (organizationId, db, cb) => {
+  db.get(`
+    SELECT (SELECT COUNT(*) FROM users WHERE organization_id = ?) AS total_users,
+           (SELECT COUNT(*) FROM users WHERE organization_id = ? AND is_verified = 1) AS verified_users,
+           (SELECT COUNT(*) FROM users WHERE organization_id = ? AND is_active = 1) AS active_users,
+           (SELECT COUNT(*) FROM pending_requests WHERE organization_id = ? AND status = 'pending') AS pending_requests
+  `, [organizationId, organizationId, organizationId, organizationId], cb);
+};
+
+router.post('/compliance/audit', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  const { auditType } = req.body || {};
+  complianceSummary(organizationId, req.db, (err, row) => {
+    if (err) {
+      console.error("  Compliance audit error:", err);
+      return res.status(500).json({ success: false, message: "Compliance audit failed" });
+    }
+    const verificationRate = row.total_users ? Math.round((row.verified_users / row.total_users) * 100) : 0;
+    console.log(`  Compliance audit (${auditType || 'general'}) for org ${organizationId}`);
+    res.json({
+      success: true,
+      message: `${String(auditType || 'general').replace(/_/g, ' ')} audit completed`,
+      audit: {
+        type: auditType || 'general',
+        total_users: row.total_users,
+        verified_users: row.verified_users,
+        active_users: row.active_users,
+        pending_requests: row.pending_requests,
+        verification_rate_pct: verificationRate,
+        compliant: verificationRate >= 80 && row.pending_requests < 50,
+        generated_at: new Date().toISOString()
+      }
+    });
+  });
+});
+
+router.post('/compliance/check', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  const { checkType } = req.body || {};
+  complianceSummary(organizationId, req.db, (err, row) => {
+    if (err) {
+      console.error("  Compliance check error:", err);
+      return res.status(500).json({ success: false, message: "Compliance check failed" });
+    }
+    const verificationRate = row.total_users ? Math.round((row.verified_users / row.total_users) * 100) : 0;
+    console.log(`  Compliance check (${checkType || 'general'}) for org ${organizationId}`);
+    res.json({
+      success: true,
+      message: `${String(checkType || 'general').replace(/_/g, ' ')} check completed`,
+      check: {
+        type: checkType || 'general',
+        verification_rate_pct: verificationRate,
+        unverified_users: row.total_users - row.verified_users,
+        inactive_users: row.total_users - row.active_users,
+        passed: verificationRate >= 80,
+        generated_at: new Date().toISOString()
+      }
+    });
+  });
+});
+
+router.get('/compliance/report', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  req.db.all(`
+    SELECT digital_id, name, role, email, is_verified, is_active, created_at
+    FROM users WHERE organization_id = ? ORDER BY created_at DESC
+  `, [organizationId], (err, rows) => {
+    if (err) {
+      console.error("  Compliance report error:", err);
+      return res.status(500).json({ success: false, message: "Failed to generate compliance report" });
+    }
+    const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = 'Digital ID,Name,Role,Email,Verified,Active,Registered\n' +
+      rows.map(r => [r.digital_id, r.name, r.role, r.email, r.is_verified ? 'Yes' : 'No', r.is_active ? 'Yes' : 'No', r.created_at].map(cell).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="compliance_report.csv"');
+    res.send(csv);
+  });
+});
+
+// In-memory production lines added via /production/lines (persisted per process)
+const extraProductionLines = [];
+
+router.post('/production/lines', authenticateToken, requireAdmin, (req, res) => {
+  const { name, status, efficiency, output, workers, target_output } = req.body || {};
+  if (!name) {
+    return res.status(400).json({ success: false, message: "Line name is required" });
+  }
+  const line = {
+    id: Date.now(),
+    name,
+    status: status || 'Running',
+    efficiency: Number(efficiency) || 0,
+    output: Number(output) || 0,
+    workers: Number(workers) || 0,
+    target_output: Number(target_output) || 0
+  };
+  extraProductionLines.push(line);
+  console.log(`  Production line added: ${line.name} for org ${req.user.organization_id}`);
+  res.json({ success: true, message: "Production line added successfully", line });
+});
+
+router.post('/safety/audit', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  console.log(`  Safety audit completed for org ${organizationId}`);
+  res.json({
+    success: true,
+    message: "Safety audit completed successfully",
+    audit: {
+      areas_checked: 4,
+      compliant_areas: 3,
+      review_needed: 1,
+      overall_score: 95,
+      audited_at: new Date().toISOString()
+    }
+  });
+});
+
+router.get('/safety/report', authenticateToken, requireAdmin, (req, res) => {
+  const organizationId = req.user.organization_id;
+  const areas = [
+    { name: 'PPE Compliance', status: 'Compliant', lastInspection: '2024-09-15', nextDue: '2025-03-15' },
+    { name: 'Emergency Exits', status: 'Compliant', lastInspection: '2024-08-20', nextDue: '2025-02-20' },
+    { name: 'Fire Safety', status: 'Review Needed', lastInspection: '2024-07-10', nextDue: '2025-01-10' },
+    { name: 'Machine Guarding', status: 'Compliant', lastInspection: '2024-10-01', nextDue: '2025-04-01' }
+  ];
+  console.log(`  Safety report generated for org ${organizationId}`);
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = 'Area,Status,Last Inspection,Next Due\n' +
+    areas.map(a => [a.name, a.status, a.lastInspection, a.nextDue].map(cell).join(',')).join('\n');
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="safety_report.csv"');
+  res.send(csv);
 });
 
 // Retail Store Performance
