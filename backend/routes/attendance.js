@@ -19,7 +19,7 @@ function getUserAttendanceState(db, digitalId, callback) {
     SELECT punch_type, timestamp
     FROM attendance
     WHERE digital_id = ?
-    ORDER BY timestamp DESC
+    ORDER BY timestamp DESC, id DESC
     LIMIT 1
   `;
 
@@ -352,6 +352,14 @@ router.post('/punch', authenticateToken, async (req, res) => {
     return res.status(429).json({ success: false, message: "Too many attendance entries. Please wait." });
   }
 
+  // Server-side geofence enforcement (in the async route context, BEFORE the
+  // state callback, so no await is needed inside the synchronous SQLite flow).
+  const geo = await validateGeofence(req.db, req.user.organization_id, location_data);
+  if (!geo.ok) {
+    console.log(` Geofence rejected punch for ${req.user.digital_id}: ${geo.message}`);
+    return res.status(geo.status).json({ success: false, message: geo.message });
+  }
+
   // Get user's current attendance state and validate the punch
   getUserAttendanceState(req.db, req.user.digital_id, (err, stateInfo) => {
     if (err) {
@@ -374,7 +382,7 @@ router.post('/punch', authenticateToken, async (req, res) => {
       });
     }
 
-    // If validation passes, proceed with the punch
+    // If validation passes, proceed with the punch (geofence already validated above)
     req.db.run(`
       INSERT INTO attendance (digital_id, organization_id, attendance_method, location_data, punch_type, notes, ip_address, user_agent)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -382,7 +390,7 @@ router.post('/punch', authenticateToken, async (req, res) => {
       req.user.digital_id,
       req.user.organization_id || 1,
       attendance_method,
-      JSON.stringify(location_data || {}),
+      JSON.stringify(Object.assign({}, location_data || {}, geo.fence ? { geofence: geo.fence, distance_m: geo.distance } : {})),
       punch_type,
       notes || '',
       clientIp,
@@ -464,6 +472,63 @@ function getAllowedActions(currentState) {
   };
 
   return actionMap[currentState] || [];
+}
+
+// Haversine distance in meters
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180, Δλ = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * SERVER-SIDE geofence enforcement (previously only checked in client JS,
+ * which was trivially bypassable). If the organization has active geofences:
+ *  - punches MUST include GPS coordinates in location_data
+ *  - the coordinates MUST fall inside at least one fence radius
+ * If the organization has no geofences, punches are allowed from anywhere.
+ */
+function validateGeofence(db, organizationId, locationData) {
+  return new Promise((resolve) => {
+    db.all(
+      `SELECT name, latitude, longitude, radius FROM geofences WHERE organization_id = ? AND is_active = 1`,
+      [organizationId],
+      (err, fences) => {
+        if (err) {
+          console.error(' Geofence lookup error:', err);
+          return resolve({ ok: true }); // fail-open on DB error, never block attendance on infra failure
+        }
+        if (!fences || fences.length === 0) return resolve({ ok: true });
+
+        let lat = locationData ? locationData.latitude : undefined;
+        let lng = locationData ? locationData.longitude : undefined;
+        if (typeof lat === 'string') lat = parseFloat(lat);
+        if (typeof lng === 'string') lng = parseFloat(lng);
+
+        if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+          return resolve({
+            ok: false,
+            status: 400,
+            message: 'GPS location is required for attendance. Please allow location access and try again.'
+          });
+        }
+
+        for (const f of fences) {
+          const distance = haversineMeters(lat, lng, f.latitude, f.longitude);
+          if (distance <= (f.radius || 0)) {
+            return resolve({ ok: true, fence: f.name, distance: Math.round(distance) });
+          }
+        }
+        resolve({
+          ok: false,
+          status: 403,
+          message: 'You are outside all geofenced attendance areas. Please move within the allowed location boundary.'
+        });
+      }
+    );
+  });
 }
 
 // Generate single-use QR code for specific user
@@ -608,7 +673,7 @@ router.post('/punch-qr', authenticateToken, (req, res) => {
     }
 
     // Get user's current attendance state and validate the punch
-    getUserAttendanceState(req.db, req.user.digital_id, (err, stateInfo) => {
+    getUserAttendanceState(req.db, req.user.digital_id, async (err, stateInfo) => {
       if (err) {
         console.error(" QR State check error:", err);
         return res.status(500).json({ success: false, message: "Failed to validate attendance state" });
@@ -638,39 +703,78 @@ router.post('/punch-qr', authenticateToken, (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid QR code format" });
       }
 
-      // Validate QR code in database and check single-use constraints
-      req.db.get(`
-        SELECT * FROM qr_codes
-        WHERE code = ? AND is_active = 1 AND is_used = 0
-      `, [qr_data], (err, qrCode) => {
-        if (err || !qrCode) {
-          console.log('QR Code lookup failed:', {
-            error: err,
-            qr_data: qr_data,
-            qr_data_length: qr_data ? qr_data.length : 0,
-            user_id: req.user.digital_id,
-            org_id: req.user.organization_id
-          });
-          return res.status(400).json({ success: false, message: "Invalid, expired, or already used QR code" });
-        }
+      // Validate QR code in database. Match either the stored JSON payload
+      // (user/location QRs) or, for admin-generated STAFF QRs whose QR image
+      // encodes compact JSON, fall back to the assigned user's latest active code.
+      const lookupQR = () => new Promise((resolve) => {
+        req.db.get(
+          `SELECT * FROM qr_codes WHERE code = ? AND is_active = 1`,
+          [qr_data],
+          (err, row) => {
+            if (row) return resolve(row);
+            if (qrInfo && qrInfo.t === 's' && qrInfo.s) {
+              return req.db.get(
+                `SELECT * FROM qr_codes
+                 WHERE assigned_user = ? AND organization_id = ? AND is_active = 1
+                 ORDER BY created_at DESC LIMIT 1`,
+                [qrInfo.s, req.user.organization_id],
+                (err2, row2) => resolve(row2 || null)
+              );
+            }
+            resolve(null);
+          }
+        );
+      });
 
-        // Check expiration
-        if (new Date() > new Date(qrCode.valid_until)) {
-          return res.status(400).json({ success: false, message: "QR code has expired" });
-        }
-
-        // Verify organization match
-        if (qrInfo.org_id !== req.user.organization_id) {
-          return res.status(403).json({ success: false, message: "QR code not valid for your organization" });
-        }
-
-        // For now, allow any user from the same organization to use the QR code
-        // This makes QR codes work for general attendance rather than user-specific
-        console.log('QR Code validation passed:', {
-          qr_assigned_user: qrCode.assigned_user,
-          current_user: req.user.digital_id,
-          organization_match: qrInfo.org_id === req.user.organization_id
+      const qrCode = await lookupQR();
+      if (!qrCode) {
+        console.log('QR Code lookup failed:', {
+          error: undefined,
+          qr_data: qr_data,
+          qr_data_length: qr_data ? qr_data.length : 0,
+          user_id: req.user.digital_id,
+          org_id: req.user.organization_id
         });
+        return res.status(400).json({ success: false, message: "Invalid, expired, or already used QR code" });
+      }
+
+      // Check expiration
+      if (new Date() > new Date(qrCode.valid_until)) {
+        return res.status(400).json({ success: false, message: "QR code has expired" });
+      }
+
+      // Verify organization match
+      if ((qrInfo.org_id ?? qrInfo.organization_id ?? qrInfo.o) !== req.user.organization_id) {
+        return res.status(403).json({ success: false, message: "QR code not valid for your organization" });
+      }
+
+      // Enforce user binding: single-use QRs issued to a specific user may only
+      // be used by that user (previously any org member could use them).
+      if (qrCode.assigned_user && qrCode.assigned_user !== req.user.digital_id) {
+        console.log(` QR user-binding rejected: code assigned to ${qrCode.assigned_user}, presented by ${req.user.digital_id}`);
+        return res.status(403).json({ success: false, message: "This QR code was issued to another user" });
+      }
+
+      // Enforce usage limit (max_usage = null means unlimited; previously all
+      // QRs were killed after a single use regardless of max_usage).
+      if (qrCode.max_usage && (qrCode.usage_count || 0) >= qrCode.max_usage) {
+        return res.status(400).json({ success: false, message: "QR code usage limit has been reached" });
+      }
+
+      console.log('QR Code validation passed:', {
+        qr_assigned_user: qrCode.assigned_user,
+        current_user: req.user.digital_id,
+        organization_match: (qrInfo.org_id ?? qrInfo.organization_id ?? qrInfo.o) === req.user.organization_id
+      });
+
+      // Server-side geofence check when GPS coordinates are provided. For QR
+      // punches without coordinates, possession of the valid org QR code is
+      // accepted as the presence proof.
+      const geo = await validateGeofence(req.db, req.user.organization_id, location_data && (location_data.latitude != null || location_data.longitude != null) ? location_data : null);
+      if (!geo.ok) {
+        console.log(` Geofence rejected QR punch for ${req.user.digital_id}: ${geo.message}`);
+        return res.status(geo.status).json({ success: false, message: geo.message });
+      }
 
         // Begin transaction for atomic operation
         req.db.serialize(() => {
@@ -684,7 +788,7 @@ router.post('/punch-qr', authenticateToken, (req, res) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             req.user.digital_id,
-            qrInfo.org_id,
+            qrInfo.org_id ?? qrInfo.organization_id ?? qrInfo.o,
             method === 'manual' ? 'qr_manual' : 'qr_scan',
             JSON.stringify({...location_data, qr_location: qrCode.location_name}),
             punch_type,
@@ -698,13 +802,16 @@ router.post('/punch-qr', authenticateToken, (req, res) => {
               return res.status(500).json({ success: false, message: "Failed to log attendance" });
             }
 
-            // Mark QR code as used (single-use invalidation)
+            // Record QR usage: increment count, mark exhausted only when the
+            // usage limit is reached (shared location QRs honor max_usage).
+            const newUsage = (qrCode.usage_count || 0) + 1;
+            const exhausted = qrCode.max_usage && newUsage >= qrCode.max_usage;
             req.db.run(`
               UPDATE qr_codes
-              SET is_used = 1, used_by = ?, used_method = ?, used_at = CURRENT_TIMESTAMP,
+              SET is_used = ?, used_by = ?, used_method = ?, used_at = CURRENT_TIMESTAMP,
                   usage_count = usage_count + 1
               WHERE id = ?
-            `, [req.user.digital_id, method, qrCode.id], function(updateErr) {
+            `, [exhausted ? 1 : 0, req.user.digital_id, method, qrCode.id], function(updateErr) {
               if (updateErr) {
                 req.db.run("ROLLBACK");
                 console.error(" QR code invalidation error:", updateErr);
@@ -731,7 +838,6 @@ router.post('/punch-qr', authenticateToken, (req, res) => {
             });
           });
         });
-      });
     });
 
   } catch (error) {

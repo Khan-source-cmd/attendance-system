@@ -86,6 +86,7 @@ async function runTests() {
   const adm = j(reg.b);
   ok('register-organization (admin auto-verified)', reg.s === 200 && !!adm.token, reg.s);
   const A = adm.token;
+  const aId = adm.digital_id;
   for (const [m, p] of [['GET', '/api/profile'], ['GET', '/api/admin/dashboard-stats'], ['GET', '/api/admin/users'],
     ['GET', '/api/admin/system-health'], ['GET', '/api/reports/dashboard/education'],
     ['GET', '/api/organization/details'], ['GET', '/api/organization/codes']]) {
@@ -152,6 +153,83 @@ async function runTests() {
     ok(`CSV report ${p}`, r.s === 200 && (r.h['content-type'] || '').includes('csv'), r.s);
   }
 
+  console.log('=== 6. GEOFENCE ENFORCEMENT (server-side) ===');
+  // Org A gets a geofence around Lahore (31.5204, 74.3587) with 300m radius
+  ok('create geofence', (await req('POST', '/api/admin/geofence', { name: 'Campus', latitude: 31.5204, longitude: 74.3587, radius: 300 }, A)).s === 200);
+  // Ensure student is in a clean 'checked_out' state before testing geofence.
+  const stPre = j((await req('GET', '/api/attendance/state', null, S)).b);
+  const preState = stPre.state || stPre.data?.state;
+  if (preState === 'checked_in' || preState === 'on_break') {
+    // Org A has an ACTIVE geofence, so a punch needs valid GPS inside the fence.
+    await req('POST', '/api/attendance/punch', { punch_type: 'out', location_data: { latitude: 31.5205, longitude: 74.3588 } }, S);
+  }
+  const stNow = j((await req('GET', '/api/attendance/state', null, S)).b);
+  const nowState = stNow.state || stNow.data?.state;
+  ok('setup: student in checked_out state before geofence tests', nowState === 'checked_out', 'state=' + nowState);
+  // Now 'in' punch attempts exercise the geofence (student is checked_out):
+  const noGps = await req('POST', '/api/attendance/punch', { punch_type: 'in' }, S);
+  console.log('  [debug] noGps ->', noGps.s, j(noGps.b).message);
+  ok('punch WITHOUT GPS rejected when geofence active', noGps.s === 400, noGps.s + ' ' + j(noGps.b).message);
+  const farGps = await req('POST', '/api/attendance/punch', { punch_type: 'in', location_data: { latitude: 48.8566, longitude: 2.3522 } }, S); // Paris
+  console.log('  [debug] farGps ->', farGps.s, j(farGps.b).message);
+  ok('punch from FAR location rejected (403)', farGps.s === 403, farGps.s + ' ' + j(farGps.b).message);
+  const nearGps = await req('POST', '/api/attendance/punch', { punch_type: 'in', location_data: { latitude: 31.5205, longitude: 74.3588 } }, S); // ~15m away
+  console.log('  [debug] nearGps ->', nearGps.s, j(nearGps.b).message);
+  ok('punch from INSIDE fence accepted', nearGps.s === 200, nearGps.s + ' ' + j(nearGps.b).message);
+  const outPunch = await req('POST', '/api/attendance/punch', { punch_type: 'out', location_data: { latitude: 31.5205, longitude: 74.3588 } }, S);
+  console.log('  [debug] punch out ->', outPunch.s, j(outPunch.b).message);
+  ok('punch out inside fence', outPunch.s === 200, outPunch.s + ' ' + j(outPunch.b).message);
+
+  console.log('=== 7. QR PUNCH (org lock, user binding, usage limits) ===');
+  // Location QR: admin generates, student scans (QR possession = presence proof)
+  const locQr = await req('POST', '/api/admin/generate-qr', { location_name: 'Main Gate', valid_hours: 24, max_uses: 1 }, A);
+  const locQrStr = j(locQr.b).qr_code?.qr_string;
+  ok('admin generates location QR', !!locQrStr);
+  // Student must be checked_out to punch 'in' via QR. Org A has an ACTIVE geofence,
+  // but no GPS is sent here, so the geofence is skipped and QR possession proves presence.
+  const qrGps = await req('GET', '/api/attendance/state', null, S);
+  let qrState = j(qrGps.b).state || j(qrGps.b).data?.state;
+  // Ensure student is checked_out before QR punch-in (geofence is active, so a
+  // punch-out needs GPS inside the fence). Retry briefly to absorb SQLite races.
+  let attempts = 0;
+  while ((qrState === 'checked_in' || qrState === 'on_break') && attempts < 3) {
+    await req('POST', '/api/attendance/punch', { punch_type: 'out', location_data: { latitude: 31.5205, longitude: 74.3588 } }, S);
+    await new Promise(r => setTimeout(r, 150));
+    qrState = j((await req('GET', '/api/attendance/state', null, S)).b).state || j((await req('GET', '/api/attendance/state', null, S)).b).data?.state;
+    attempts++;
+  }
+  console.log('  [debug] qr state before punch:', JSON.stringify(qrState));
+  const qrPunch = await req('POST', '/api/attendance/punch-qr', { qr_data: locQrStr, punch_type: 'in', location_data: { latitude: 31.5205, longitude: 74.3588 } }, S);
+  ok('QR punch with valid location QR', qrPunch.s === 200, qrPunch.s + ' ' + j(qrPunch.b).message);
+  const qrReuse = await req('POST', '/api/attendance/punch-qr', { qr_data: locQrStr, punch_type: 'out' }, S);
+  ok('QR reuse beyond max_usage=1 rejected', qrReuse.s === 400, qrReuse.s + ' ' + j(qrReuse.b).message);
+  // User-binding: admin generates a QR assigned to HIMSELF, student tries to use it.
+  // The bind/cross-org checks run AFTER the state guard, so the student must be in
+  // a clean checked_out state. The sqlite async connector needs a moment to make a
+  // write visible, so retry the punch-out until state actually settles as checked_out.
+  const ensureCheckedOut = async () => {
+    for (let a = 0; a < 5; a++) {
+      const st = j((await req('GET', '/api/attendance/state', null, S)).b);
+      const cur = st.state || st.data?.state;
+      if (cur === 'checked_out' || cur === 'ready') return true;
+      await req('POST', '/api/attendance/punch', { punch_type: 'out', location_data: { latitude: 31.5205, longitude: 74.3588 } }, S);
+      await new Promise(r => setTimeout(r, 200));
+    }
+    return false;
+  };
+  const adminQr = await req('POST', '/api/attendance/generate-user-qr', { user_id: aId, location_name: 'Admin Office' }, A);
+  const adminQrStr = j(adminQr.b).qr_data;
+  ok('user-QR generated for admin', !!adminQrStr);
+  ok('bind-test setup: student checked out', await ensureCheckedOut());
+  const bindTest = await req('POST', '/api/attendance/punch-qr', { qr_data: adminQrStr, punch_type: 'in' }, S);
+  ok('QR issued to another user rejected (403)', bindTest.s === 403, bindTest.s + ' ' + j(bindTest.b).message);
+  // Cross-org: org B QR cannot be used by org A student
+  const bLocQr = await req('POST', '/api/admin/generate-qr', { location_name: 'Hospital Gate', valid_hours: 24 }, B);
+  const bQrStr = j(bLocQr.b).qr_code?.qr_string;
+  ok('cross-org setup: student checked out', await ensureCheckedOut());
+  const crossOrg = await req('POST', '/api/attendance/punch-qr', { qr_data: bQrStr, punch_type: 'in' }, S);
+  ok('cross-org QR rejected (403)', crossOrg.s === 403, crossOrg.s + ' ' + j(crossOrg.b).message);
+
   console.log('\n==============================');
   console.log(`RESULTS: ${pass} passed, ${fail} failed`);
   if (failures.length) { console.log('FAILURES:'); failures.forEach(f => console.log('  - ' + f)); }
@@ -164,6 +242,19 @@ async function runTests() {
     console.error('FATAL: backend/.env not found. Copy backend/.env.example and fill in secrets first.');
     process.exit(2);
   }
+
+  // Test isolation: clear the persistent rate-limiter and stale OTP/reset
+  // tables so repeated runs don't trip IP rate limits (production brute-force
+  // protection must not block a CI suite). Safe for a test only.
+  try {
+    const sqlite3 = require(path.join(ROOT, 'backend', 'node_modules', 'sqlite3'));
+    const dbPort = new sqlite3.Database(path.join(ROOT, 'backend', 'database.db'), () => {
+      dbPort.run('DELETE FROM rate_limits', () => {
+        dbPort.run('DELETE FROM otp_verifications', () => dbPort.close());
+      });
+    });
+  } catch (e) { console.error('WARN: could not clear rate_limits for test:', e.message); }
+
   console.log('Booting test server on port ' + PORT + ' ...');
   const server = spawn('node', ['index.js'], {
     cwd: path.join(ROOT, 'backend'),
