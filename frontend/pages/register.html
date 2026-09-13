@@ -583,8 +583,8 @@
         // For local development, try to use the actual network IP
         API_BASE = 'http://localhost:4000'; // Fallback to localhost
       } else {
-        // For network access, use the current hostname
-        API_BASE = `http://${hostname}:4000`;
+        // For network access, use relative path (same domain)
+        API_BASE = '/';
       }
 
     const industryRoles = {
