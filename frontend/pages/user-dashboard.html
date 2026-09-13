@@ -684,6 +684,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/pages/integrations.html">
+                    <i class="fas fa-plug me-2"></i>Integrations
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#" onclick="logout()">
                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                 </a>
@@ -1800,13 +1805,7 @@
         const userData = getUserData();
         if (!userData.token || !userData.digitalid) {
             console.log('No authentication found, redirecting to register');
-            // For development, create demo user data if no auth found
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                console.log('Development mode: Creating demo user data');
-                createDemoUserData();
-            } else {
-                window.location.href = '/pages/register.html';
-            }
+            window.location.href = '/pages/register.html';
         }
 
         
@@ -2130,11 +2129,7 @@
                 }
             } catch (error) {
                 console.error('Teacher features load error:', error);
-                // Fallback demo data
-                teacherClasses = [
-                    { id: 1, classname: 'CS101', subject: 'Introduction to Programming', scheduletime: '09:00-10:30', studentcount: 25 },
-                    { id: 2, classname: 'CS201', subject: 'Data Structures', scheduletime: '11:00-12:30', studentcount: 20 }
-                ];
+                teacherClasses = [];
                 updateTeacherStats();
             }
         }
@@ -2224,7 +2219,7 @@
             if (totalClassesEl) totalClassesEl.textContent = totalClasses;
             if (totalStudentsEl) totalStudentsEl.textContent = totalStudents;
             if (todayClassesEl) todayClassesEl.textContent = totalClasses; // All classes for demo
-            if (avgAttendanceEl) avgAttendanceEl.textContent = '87%'; // Demo value
+            if (avgAttendanceEl) avgAttendanceEl.textContent = (quickAvgAttendanceEl && quickAvgAttendanceEl.textContent) || '—'; // Real value from /api/classes/attendance-overview
         }
 
         // Show teacher view
@@ -2308,12 +2303,9 @@
                 if (result.success) {
                     currentClassStudents = result.students;
                 } else {
-                    // Fallback demo data
-                    currentClassStudents = [
-                        { id: 1, name: 'John Smith', rollnumber: 'CS001', ispresent: null },
-                        { id: 2, name: 'Jane Doe', rollnumber: 'CS002', ispresent: null },
-                        { id: 3, name: 'Mike Johnson', rollnumber: 'CS003', ispresent: null }
-                    ];
+                    // Real API failed - honest empty state, never fake students
+                    currentClassStudents = [];
+                    console.warn('Student list unavailable for this class');
                 }
 
                 displayStudentsInModal();

@@ -564,6 +564,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/pages/integrations.html">
+                    <i class="fas fa-plug me-2"></i>Integrations
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#" onclick="logout()">
                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                 </a>
@@ -1115,50 +1120,10 @@
                         loadScheduledLectures();
                     }
                 } else {
-                    // Fallback demo data - subjects the teacher teaches (updated for new schema)
-                    teacherClasses = [
-                        {
-                            class_subject_id: 1,
-                            class_id: 1,
-                            teacher_id: 'EDU-TEA-0001',
-                            schedule_time: 'Mon, Wed 09:00-10:30',
-                            room_number: 'Room 101',
-                            max_students: 25,
-                            class_code: 'CS101',
-                            class_name: 'Computer Science Semester 1',
-                            subject_code: 'CS101',
-                            subject_name: 'Introduction to Programming',
-                            semester: 'Fall',
-                            academic_year: '2024-25',
-                            student_count: 25,
-                            today_marked: 0,
-                            today_present: 0,
-                            attendance_percentage: 0,
-                            attendance_status: 'pending'
-                        },
-                        {
-                            class_subject_id: 2,
-                            class_id: 2,
-                            teacher_id: 'EDU-TEA-0001',
-                            schedule_time: 'Tue, Thu 11:00-12:30',
-                            room_number: 'Room 203',
-                            max_students: 20,
-                            class_code: 'CS201',
-                            class_name: 'Computer Science Semester 2',
-                            subject_code: 'CS201',
-                            subject_name: 'Data Structures',
-                            semester: 'Spring',
-                            academic_year: '2024-25',
-                            student_count: 20,
-                            today_marked: 0,
-                            today_present: 0,
-                            attendance_percentage: 0,
-                            attendance_status: 'pending'
-                        }
-                    ];
+                    console.log('🔍 API returned success=false, showing empty state');
+                    teacherClasses = [];
                     updateTeacherStats();
                     displayClasses();
-                    loadScheduledLectures();
                 }
             } catch (error) {
                 console.error('Error loading teacher data:', error);
@@ -1279,23 +1244,7 @@
                     }
                 } else {
                     console.log('🔍 API call failed with status:', response.status);
-                    // Fallback demo data - only show non-cancelled lectures
-                    scheduledLectures = [
-                        {
-                            id: 1,
-                            title: 'Variables and Data Types',
-                            scheduled_date: '2025-09-20',
-                            start_time: '09:00',
-                            end_time: '10:30',
-                            class_code: 'CS101',
-                            class_name: 'Computer Science Semester 1',
-                            subject_code: 'CS101',
-                            subject_name: 'Introduction to Programming',
-                            room_number: 'CS-101',
-                            status: 'scheduled',
-                            notes: 'Introduction to basic programming concepts'
-                        }
-                    ].filter(lecture => lecture.status !== 'cancelled');
+                    scheduledLectures = [];
                     displayScheduledLectures();
                 }
             } catch (error) {
@@ -1474,46 +1423,12 @@
                         }));
                         console.log(`Loaded ${currentClassStudents.length} real students`);
                     } else {
-                        console.log('API returned success but no students, checking fallback...');
-                        // Check if this is the INS subject (class_subject_id: 7) and show real student
-                        if (subjectId == 7) {
-                            console.log('INS subject detected, using real student data');
-                            currentClassStudents = [{
-                                id: 187, // From database check
-                                name: 'Student',
-                                rollnumber: 'EDU-STU-0001',
-                                ispresent: null
-                            }];
-                        } else {
-                            // Fallback demo data for other subjects
-                            currentClassStudents = Array.from({length: selectedSubject.max_students || 5}, (_, i) => ({
-                                id: i + 1,
-                                name: `Student ${i + 1}`,
-                                rollnumber: `STU${String(i + 1).padStart(3, '0')}`,
-                                ispresent: null
-                            }));
-                        }
+                        console.log('API returned success but no students, showing empty state');
+                        currentClassStudents = [];
                     }
                 } else {
-                    console.log('API call failed, using fallback data');
-                    // Check if this is the INS subject (class_subject_id: 7) and show real student
-                    if (subjectId == 7) {
-                        console.log('INS subject detected (fallback), using real student data');
-                        currentClassStudents = [{
-                            id: 187, // From database check
-                            name: 'Student',
-                            rollnumber: 'EDU-STU-0001',
-                            ispresent: null
-                        }];
-                    } else {
-                        // Fallback demo data for other subjects
-                        currentClassStudents = Array.from({length: selectedSubject.max_students || 5}, (_, i) => ({
-                            id: i + 1,
-                            name: `Student ${i + 1}`,
-                            rollnumber: `STU${String(i + 1).padStart(3, '0')}`,
-                            ispresent: null
-                        }));
-                    }
+                    console.log('API call failed, showing empty student state');
+                    currentClassStudents = [];
                 }
 
                 displayStudentsInModal();
@@ -1826,21 +1741,12 @@
                         showNotification(result.message || 'Failed to schedule lecture', 'error');
                     }
                 } else {
-                    // API failed, but add to local array for demo purposes
-                    scheduledLectures.push(newLecture);
-                    showNotification('Lecture scheduled successfully! (Demo mode)', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('scheduleLectureModal')).hide();
-                    document.getElementById('scheduleLectureForm').reset();
-                    displayScheduledLectures(); // Refresh display immediately
+                    // API failed: honest error, nothing saved
+                    showNotification('Failed to schedule lecture. Please try again.', 'error');
                 }
             } catch (error) {
                 console.error('Error scheduling lecture:', error);
-                // Network error, but add to local array for demo purposes
-                scheduledLectures.push(newLecture);
-                showNotification('Lecture scheduled successfully! (Demo mode)', 'success');
-                bootstrap.Modal.getInstance(document.getElementById('scheduleLectureModal')).hide();
-                document.getElementById('scheduleLectureForm').reset();
-                displayScheduledLectures(); // Refresh display immediately
+                showNotification('Error scheduling lecture. Please try again.', 'error');
             }
         }
 
@@ -2164,18 +2070,9 @@
                     }
                 }
 
-                // If still no data, use demo data as last resort with realistic attendance based on lecture stats
+                // If still no data, show empty state
                 if (attendanceData.length === 0) {
-                    console.log('Using demo data as fallback');
-                    const totalStudents = selectedLecture.attendance_count || 25;
-                    const presentCount = selectedLecture.present_count || Math.floor(totalStudents * 0.7);
-
-                    attendanceData = Array.from({length: totalStudents}, (_, i) => ({
-                        id: i + 1,
-                        name: `Student ${i + 1}`,
-                        rollnumber: `STU${String(i + 1).padStart(3, '0')}`,
-                        ispresent: i < presentCount // First N students are present
-                    }));
+                    console.log('No attendance data available');
                 }
 
                 currentClassStudents = attendanceData;
@@ -2339,46 +2236,12 @@
                             }));
                         console.log(`Loaded ${currentClassStudents.length} real students from lecture API`);
                     } else {
-                        console.log('Lecture API returned success but no students, checking fallback...');
-                        // Check if this is the INS subject (class_subject_id: 7) and show real student
-                        if (selectedLecture.class_subject_id == 7) {
-                            console.log('INS lecture detected, using real student data');
-                            currentClassStudents = [{
-                                id: 187, // From database check
-                                name: 'Student',
-                                rollnumber: 'EDU-STU-0001',
-                                ispresent: null
-                            }];
-                        } else {
-                            // Fallback demo data for other subjects
-                            currentClassStudents = Array.from({length: 25}, (_, i) => ({
-                                id: i + 1,
-                                name: `Student ${i + 1}`,
-                                rollnumber: `STU${String(i + 1).padStart(3, '0')}`,
-                                ispresent: null
-                            }));
-                        }
+                        console.log('Lecture API returned success but no students, showing empty state');
+                        currentClassStudents = [];
                     }
                 } else {
-                    console.log('Lecture API call failed, using fallback data');
-                    // Check if this is the INS subject (class_subject_id: 7) and show real student
-                    if (selectedLecture.class_subject_id == 7) {
-                        console.log('INS lecture detected (fallback), using real student data');
-                        currentClassStudents = [{
-                            id: 187, // From database check
-                            name: 'Student',
-                            rollnumber: 'EDU-STU-0001',
-                            ispresent: null
-                        }];
-                    } else {
-                        // Fallback demo data for other subjects
-                        currentClassStudents = Array.from({length: 25}, (_, i) => ({
-                            id: i + 1,
-                            name: `Student ${i + 1}`,
-                            rollnumber: `STU${String(i + 1).padStart(3, '0')}`,
-                            ispresent: null
-                        }));
-                    }
+                    console.log('Lecture API call failed');
+                    currentClassStudents = [];
                 }
 
                 displayStudentsInModal();
@@ -2471,37 +2334,8 @@
                         attendanceHistory = result.attendance || [];
                     }
                 } else {
-                    // Fallback demo data
-                    attendanceHistory = [
-                        {
-                            date: '2025-09-20',
-                            status: 'present',
-                            lecture_topic: 'Variables and Data Types',
-                            time: '09:00-10:30',
-                            notes: 'On time'
-                        },
-                        {
-                            date: '2025-09-18',
-                            status: 'present',
-                            lecture_topic: 'Introduction to Programming',
-                            time: '11:00-12:30',
-                            notes: 'Active participation'
-                        },
-                        {
-                            date: '2025-09-16',
-                            status: 'absent',
-                            lecture_topic: 'Basic Algorithms',
-                            time: '09:00-10:30',
-                            notes: 'Medical leave'
-                        },
-                        {
-                            date: '2025-09-13',
-                            status: 'present',
-                            lecture_topic: 'Control Structures',
-                            time: '11:00-12:30',
-                            notes: ''
-                        }
-                    ];
+                    // No attendance data available
+                    attendanceHistory = [];
                 }
 
                 // Calculate statistics
@@ -2674,25 +2508,8 @@
                         attendanceData = result.attendance || [];
                     }
                 } else {
-                    // Fallback demo data for specific class
-                    const selectedSubject = teacherClasses.find(s => s.class_subject_id == classSubjectId);
-                    const totalStudents = selectedSubject?.max_students || 25;
-
-                    attendanceData = Array.from({length: Math.floor(Math.random() * 15) + 5}, (_, i) => ({
-                        session_id: i + 1,
-                        date: new Date(Date.now() - (i * 7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
-                        topic: `Lecture ${i + 1}`,
-                        present_count: Math.floor(Math.random() * totalStudents * 0.3) + Math.floor(totalStudents * 0.7),
-                        absent_count: 0, // Will be calculated
-                        total_students: totalStudents,
-                        attendance_rate: 0 // Will be calculated
-                    }));
-
-                    // Calculate absent count and attendance rate
-                    attendanceData.forEach(session => {
-                        session.absent_count = session.total_students - session.present_count;
-                        session.attendance_rate = Math.round((session.present_count / session.total_students) * 100);
-                    });
+                    // Honest fallback: no fabricated attendance records
+                    attendanceData = [];
                 }
 
                 displayClassAttendanceRecords(attendanceData, classSubjectId);

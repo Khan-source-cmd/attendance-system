@@ -782,7 +782,7 @@
       document.getElementById('step3').classList.add('d-none');
     });
 
-    // Organization code validation with fallback for demo/development
+    // Organization code validation
     document.getElementById('validateOrgCode').addEventListener('click', async () => {
       const orgCode = document.getElementById('organization_code').value.trim();
       if (!orgCode) {
@@ -869,188 +869,26 @@
             showFeedback(result.message || 'Invalid organization code. Please check the code or contact your administrator.', 'danger');
           }
         } else if (res.status === 404) {
-          // API endpoint not found, use demo fallback
-          console.log('API endpoint not found, using demo fallback');
-          await validateOrgCodeDemo(orgCode, selectedIndustry, validationIcon, validationText);
+          // API endpoint not found: honest error, no demo organizations
+          console.error('Validation endpoint not found');
+          validationIcon.innerHTML = '<i class="fas fa-exclamation-triangle fa-2x text-warning"></i>';
+          validationText.innerHTML = '<strong class="text-warning">⚠ Validation unavailable</strong><br><small class="text-muted">Server validation is not available right now</small>';
+          document.getElementById('organizationDetails').classList.add('d-none');
+          document.getElementById('continueToRegistration').classList.add('d-none');
+          showFeedback('Organization validation is temporarily unavailable. Please try again later.', 'warning');
         } else {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         }
       } catch (err) {
         console.error('Organization validation error:', err);
-        // If real API fails, try demo fallback
-        if (err.message.includes('404') || err.message.includes('Failed to fetch')) {
-          console.log('Real API failed, using demo fallback');
-          await validateOrgCodeDemo(orgCode, selectedIndustry, validationIcon, validationText);
-        } else {
-          validationIcon.innerHTML = '<i class="fas fa-exclamation-triangle fa-2x text-warning"></i>';
-          validationText.innerHTML = '<strong class="text-warning">Connection Error</strong><br><small class="text-muted">Please try again</small>';
-          document.getElementById('organizationDetails').classList.add('d-none');
-          document.getElementById('continueToRegistration').classList.add('d-none');
-          showFeedback('Unable to validate code. Please check your connection and try again.', 'danger');
-        }
+        validationIcon.innerHTML = '<i class="fas fa-exclamation-triangle fa-2x text-warning"></i>';
+        validationText.innerHTML = '<strong class="text-warning">Validation Error</strong><br><small class="text-muted">Could not reach the server</small>';
+        document.getElementById('organizationDetails').classList.add('d-none');
+        document.getElementById('continueToRegistration').classList.add('d-none');
+        showFeedback('Could not validate the code right now. Please try again.', 'warning');
       }
     });
 
-    // Demo fallback function for organization code validation
-    async function validateOrgCodeDemo(orgCode, industry, validationIcon, validationText) {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Demo organization codes for different industries
-      const demoCodes = {
-        healthcare: ['HOSP-2025-A1B2C3', 'CLINIC-2025-D4E5F6', 'MEDCTR-2025-G7H8I9'],
-        education: ['UNIV-2025-J1K2L3', 'SCHOOL-2025-M4N5O6', 'COLLEGE-2025-P7Q8R9'],
-        corporate: ['TECH-2025-S1T2U3', 'CORP-2025-V4W5X6', 'BIZ-2025-Y7Z8A9'],
-        manufacturing: ['FACTORY-2025-B1C2D3', 'PLANT-2025-E4F5G6', 'PROD-2025-H7I8J9'],
-        government: ['GOV-2025-K1L2M3', 'AGENCY-2025-N4O5P6', 'DEPT-2025-Q7R8S9'],
-        retail: ['STORE-2025-T1U2V3', 'RETAIL-2025-W4X5Y6', 'SHOP-2025-Z7A8B9']
-      };
-
-      const industryCodes = demoCodes[industry] || [];
-      const isValidCode = industryCodes.some(code => code.toLowerCase() === orgCode.toLowerCase());
-
-      if (isValidCode) {
-        // Mock successful validation
-        const mockResult = {
-          organization_name: getMockOrgName(orgCode, industry),
-          admin_name: getMockAdminName(orgCode, industry),
-          organization_id: `org_${orgCode.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`
-        };
-
-        validationIcon.innerHTML = '<i class="fas fa-check-circle fa-2x text-success"></i>';
-        validationText.innerHTML = '<strong class="text-success">✓ Valid Code</strong><br><small class="text-muted">Organization found (Demo)</small>';
-
-        // Show organization details
-        document.getElementById('orgName').textContent = mockResult.organization_name;
-        document.getElementById('orgIndustry').textContent = industry.charAt(0).toUpperCase() + industry.slice(1);
-        document.getElementById('orgAdmin').textContent = mockResult.admin_name;
-        document.getElementById('joiningOrgName').textContent = mockResult.organization_name;
-        document.getElementById('organizationDetails').classList.remove('d-none');
-        document.getElementById('continueToRegistration').classList.remove('d-none');
-
-        document.getElementById('organization_code').setAttribute('data-validated', 'true');
-        document.getElementById('organization_code').setAttribute('data-org-id', mockResult.organization_id);
-
-        showFeedback(`✓ Connected to ${mockResult.organization_name} (Demo Mode)`, 'success');
-      } else {
-        validationIcon.innerHTML = '<i class="fas fa-times-circle fa-2x text-danger"></i>';
-        validationText.innerHTML = '<strong class="text-danger">✗ Invalid Code</strong><br><small class="text-muted">Code not found</small>';
-        document.getElementById('organizationDetails').classList.add('d-none');
-        document.getElementById('continueToRegistration').classList.add('d-none');
-        showFeedback('Invalid organization code. Please check the code or contact your administrator.', 'danger');
-      }
-    }
-
-    // Helper functions for demo data
-    function getMockOrgName(code, industry) {
-      const names = {
-        healthcare: { 'HOSP-2025-A1B2C3': 'City General Hospital', 'CLINIC-2025-D4E5F6': 'Downtown Medical Clinic', 'MEDCTR-2025-G7H8I9': 'Regional Medical Center' },
-        education: { 'UNIV-2025-J1K2L3': 'State University', 'SCHOOL-2025-M4N5O6': 'Lincoln High School', 'COLLEGE-2025-P7Q8R9': 'Community College' },
-        corporate: { 'TECH-2025-S1T2U3': 'TechCorp Solutions', 'CORP-2025-V4W5X6': 'Global Enterprises', 'BIZ-2025-Y7Z8A9': 'Innovative Solutions Inc' },
-        manufacturing: { 'FACTORY-2025-B1C2D3': 'Precision Manufacturing', 'PLANT-2025-E4F5G6': 'Industrial Solutions', 'PROD-2025-H7I8J9': 'Advanced Manufacturing Co' },
-        government: { 'GOV-2025-K1L2M3': 'City Administration', 'AGENCY-2025-N4O5P6': 'Public Services Department', 'DEPT-2025-Q7R8S9': 'State Government Office' },
-        retail: { 'STORE-2025-T1U2V3': 'MegaMart Superstore', 'RETAIL-2025-W4X5Y6': 'Fashion Central', 'SHOP-2025-Z7A8B9': 'Electronics Plus' }
-      };
-      return names[industry]?.[code] || 'Demo Organization';
-    }
-
-    function getMockAdminName(code, industry) {
-      const admins = {
-        healthcare: { 'HOSP-2025-A1B2C3': 'Dr. Sarah Johnson', 'CLINIC-2025-D4E5F6': 'Dr. Michael Chen', 'MEDCTR-2025-G7H8I9': 'Dr. Emily Rodriguez' },
-        education: { 'UNIV-2025-J1K2L3': 'Prof. Robert Davis', 'SCHOOL-2025-M4N5O6': 'Ms. Jennifer Wilson', 'COLLEGE-2025-P7Q8R9': 'Dr. David Thompson' },
-        corporate: { 'TECH-2025-S1T2U3': 'John Anderson', 'CORP-2025-V4W5X6': 'Sarah Martinez', 'BIZ-2025-Y7Z8A9': 'Mike Johnson' },
-        manufacturing: { 'FACTORY-2025-B1C2D3': 'Tom Wilson', 'PLANT-2025-E4F5G6': 'Lisa Brown', 'PROD-2025-H7I8J9': 'James Miller' },
-        government: { 'GOV-2025-K1L2M3': 'Mayor Robert Taylor', 'AGENCY-2025-N4O5P6': 'Director Susan Lee', 'DEPT-2025-Q7R8S9': 'Commissioner Mark Davis' },
-        retail: { 'STORE-2025-T1U2V3': 'Store Manager Alex Chen', 'RETAIL-2025-W4X5Y6': 'Operations Manager Maria Garcia', 'SHOP-2025-Z7A8B9': 'Branch Manager David Kim' }
-      };
-      return admins[industry]?.[code] || 'Organization Admin';
-    }
-
-    // Industry-specific department structures
-    const industryDepartments = {
-      healthcare: [
-        'Emergency Room (ER)',
-        'Intensive Care Unit (ICU)',
-        'Pediatrics',
-        'Radiology',
-        'Pharmacy',
-        'Surgery',
-        'Cardiology',
-        'Neurology',
-        'Oncology',
-        'Administration'
-      ],
-      education: [
-        'Mathematics',
-        'Science',
-        'English',
-        'History',
-        'Computer Science',
-        'Physical Education',
-        'Arts',
-        'Music',
-        'Library',
-        'Administration'
-      ],
-      corporate: [
-        'Information Technology (IT)',
-        'Human Resources (HR)',
-        'Finance',
-        'Marketing',
-        'Sales',
-        'Operations',
-        'Legal',
-        'Research & Development',
-        'Customer Service',
-        'Executive'
-      ],
-      manufacturing: [
-        'Production Line A',
-        'Production Line B',
-        'Quality Control',
-        'Maintenance',
-        'Safety & Compliance',
-        'Logistics',
-        'Engineering',
-        'Supply Chain',
-        'Warehouse',
-        'Management'
-      ],
-      government: [
-        'Public Services',
-        'Law Enforcement',
-        'Public Health',
-        'Education',
-        'Transportation',
-        'Environmental',
-        'Finance',
-        'Human Services',
-        'Planning',
-        'Administration'
-      ],
-      retail: [
-        'Sales Floor',
-        'Customer Service',
-        'Stock Room',
-        'Cashier',
-        'Management',
-        'Loss Prevention',
-        'Visual Merchandising',
-        'Receiving',
-        'Housekeeping',
-        'Administration'
-      ]
-    };
-
-    function populateRolesForIndustry(industry) {
-      const roleSelect = document.getElementById('role');
-      roleSelect.innerHTML = '<option value="">Select your role</option>';
-      if(!industryRoles[industry]) return;
-
-      industryRoles[industry].forEach(role => {
-        roleSelect.innerHTML += `<option value="${role}">${role}</option>`;
-      });
-    }
 
     function populateDepartmentsForIndustry(industry) {
       const deptSelect = document.getElementById('department');

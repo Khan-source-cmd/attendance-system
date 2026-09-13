@@ -1742,7 +1742,7 @@
                 <div class="performance-card high">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-number" id="salesPerformance">92%</div>
+                            <div class="stat-number" id="salesPerformance">0%</div>
                             <div class="stat-label">Sales Performance</div>
                         </div>
                         <div class="stat-icon" style="background: var(--success-gradient);">
@@ -2407,11 +2407,11 @@
                     return;
                 }
                 console.error('Dashboard data load error:', error);
-                // Show demo data if API fails
+                // Honest fallback on API failure - no fabricated performance number
                 updateRetailStats({
                     totalEmployees: 0,
                     activeShifts: 0,
-                    salesPerformance: '92%',
+                    salesPerformance: '0%',
                     inventoryAlerts: 0
                 });
                 updateRecentActivity([]);
@@ -2422,16 +2422,22 @@
         }
 
         // Update retail-specific stats
+        // KPIs derived from REAL /api/admin/dashboard fields - nothing fabricated.
         function updateRetailStats(data) {
-            document.getElementById('totalEmployees').textContent = data.totalEmployees || 0;
-            document.getElementById('activeShifts').textContent = data.activeShifts || 0;
-            document.getElementById('salesPerformance').textContent = data.salesPerformance || '92%';
+            const totalEmployees = data.totalEmployees ?? data.totalUsers ?? 0;
+            const activeToday = data.activeUsers ?? 0;
+
+            document.getElementById('totalEmployees').textContent = totalEmployees;
+            // Real: staff who punched in today = staff on shift today
+            document.getElementById('activeShifts').textContent = activeToday;
+            // Real performance proxy: % of staff present today
+            document.getElementById('salesPerformance').textContent = (totalEmployees > 0 ? Math.round((activeToday / totalEmployees) * 100) : 0) + '%';
             document.getElementById('inventoryAlerts').textContent = data.inventoryAlerts || 0;
 
             // Update overview stats
-            document.getElementById('storeTotalEmployees').textContent = data.totalEmployees || 0;
-            document.getElementById('storeActiveShifts').textContent = data.activeShifts || 0;
-            document.getElementById('storePendingRequests').textContent = data.pendingAudits || 0;
+            document.getElementById('storeTotalEmployees').textContent = totalEmployees;
+            document.getElementById('storeActiveShifts').textContent = activeToday;
+            document.getElementById('storePendingRequests').textContent = data.pendingAudits ?? data.pendingRequests ?? 0;
         }
 
         // Update recent activity
@@ -2634,200 +2640,132 @@
             showNotification('Inventory data refreshed!', 'success');
         }
 
-        // Load store performance data
-        function loadStorePerformanceData() {
+        // Load store performance data - REAL attendance-derived metrics
+        async function loadStorePerformanceData() {
             const container = document.getElementById('storePerformanceContent');
+            container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Loading real metrics...</div>';
 
-            // Mock store performance data for demonstration
-            const mockPerformance = [
-                {
-                    metric: 'Daily Sales Target',
-                    current: '$2,450',
-                    target: '$3,000',
-                    percentage: 82,
-                    status: 'warning'
-                },
-                {
-                    metric: 'Customer Satisfaction',
-                    current: '4.6/5',
-                    target: '4.8/5',
-                    percentage: 96,
-                    status: 'success'
-                },
-                {
-                    metric: 'Staff Productivity',
-                    current: '87%',
-                    target: '90%',
-                    percentage: 97,
-                    status: 'success'
-                },
-                {
-                    metric: 'Inventory Turnover',
-                    current: '12 days',
-                    target: '10 days',
-                    percentage: 83,
-                    status: 'warning'
-                }
-            ];
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Failed to load');
 
-            const performanceHtml = mockPerformance.map(perf => `
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
-                                <h6 class="mb-1">${perf.metric}</h6>
-                                <small class="text-muted">Target: ${perf.target}</small>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="h5 mb-1">${perf.current}</div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-${perf.status === 'success' ? 'success' : 'warning'}" style="width: ${perf.percentage}%"></div>
+                const d = result.data;
+                const total = d.totalUsers ?? 0;
+                const activeToday = d.activeUsers ?? 0;
+                const productivity = total > 0 ? Math.round((activeToday / total) * 100) : 0;
+                const attendance30 = d.totalAttendance ?? 0;
+                const pending = d.pendingRequests ?? 0;
+
+                const metrics = [
+                    { metric: 'Staff Productivity (today)', current: `${activeToday} of ${total} on shift`, percentage: productivity, status: productivity >= 70 ? 'success' : 'warning' },
+                    { metric: 'Attendance Records (30 days)', current: `${attendance30} punches`, percentage: Math.min(100, attendance30), status: 'info' },
+                    { metric: 'Pending Punch Approvals', current: `${pending} awaiting review`, percentage: Math.min(100, pending * 10), status: pending > 0 ? 'warning' : 'success' }
+                ];
+
+                container.innerHTML = metrics.map(perf => `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <h6 class="mb-1">${perf.metric}</h6>
                                 </div>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <span class="badge bg-${perf.status}">${perf.percentage}%</span>
+                                <div class="col-md-4">
+                                    <div class="h5 mb-1">${perf.current}</div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-${perf.status}" style="width: ${perf.percentage}%"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <span class="badge bg-${perf.status}">${perf.percentage}%</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
-
-            container.innerHTML = performanceHtml;
+                `).join('');
+            } catch (error) {
+                console.error('Store performance load error:', error);
+                container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-exclamation-circle fa-2x mb-3"></i><p>Could not load performance data</p></div>';
+            }
         }
 
         // Load sales analytics data
-        function loadSalesAnalyticsData() {
+        // The attendance system does not track POS/sales - show honest status
+        // plus the real staff attendance numbers instead of fabricated sales.
+        async function loadSalesAnalyticsData() {
             const container = document.getElementById('salesAnalyticsContent');
+            container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
-            // Mock sales analytics data for demonstration
-            const mockAnalytics = {
-                todaySales: '$2,450',
-                yesterdaySales: '$2,890',
-                weekSales: '$18,450',
-                monthSales: '$72,300',
-                topProducts: [
-                    { name: 'Product A', sales: '$450', percentage: 18 },
-                    { name: 'Product B', sales: '$380', percentage: 15 },
-                    { name: 'Product C', sales: '$320', percentage: 13 }
-                ]
-            };
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Failed to load');
+                const d = result.data;
+                const total = d.totalUsers ?? 0;
+                const activeToday = d.activeUsers ?? 0;
 
-            const analyticsHtml = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-header">
-                                <h6 class="mb-0">Today's Sales</h6>
+                container.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header"><h6 class="mb-0">Staff On Shift Today</h6></div>
+                                <div class="card-body">
+                                    <div class="h4 text-success mb-2">${activeToday}</div>
+                                    <small class="text-muted">out of ${total} staff members</small>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div class="h4 text-success mb-2">${mockAnalytics.todaySales}</div>
-                                <small class="text-muted">vs yesterday: ${mockAnalytics.yesterdaySales}</small>
+                            <div class="card">
+                                <div class="card-header"><h6 class="mb-0">Punch Records (30 days)</h6></div>
+                                <div class="card-body">
+                                    <div class="h4 text-info mb-2">${d.totalAttendance ?? 0}</div>
+                                    <small class="text-muted">Total attendance punches</small>
+                                </div>
                             </div>
                         </div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">Top Products</h6>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header"><h6 class="mb-0">Pending Approvals</h6></div>
+                                <div class="card-body">
+                                    <div class="h4 ${d.pendingRequests > 0 ? 'text-warning' : 'text-primary'} mb-2">${d.pendingRequests ?? 0}</div>
+                                    <small class="text-muted">Manual punch requests awaiting review</small>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                ${mockAnalytics.topProducts.map(product => `
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span>${product.name}</span>
-                                        <div class="text-end">
-                                            <div class="fw-bold">${product.sales}</div>
-                                            <small class="text-muted">${product.percentage}%</small>
-                                        </div>
-                                    </div>
-                                `).join('')}
+                            <div class="card">
+                                <div class="card-body text-center text-muted">
+                                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                    <p class="mb-0">Sales/POS analytics are not tracked by this attendance system. Integrate a POS provider to see real sales data here.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-header">
-                                <h6 class="mb-0">Weekly Sales</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="h4 text-info mb-2">${mockAnalytics.weekSales}</div>
-                                <small class="text-muted">This week's total</small>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">Monthly Sales</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="h4 text-primary mb-2">${mockAnalytics.monthSales}</div>
-                                <small class="text-muted">This month's total</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.innerHTML = analyticsHtml;
+                `;
+            } catch (error) {
+                console.error('Sales analytics load error:', error);
+                container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-exclamation-circle fa-2x mb-3"></i><p>Could not load analytics</p></div>';
+            }
         }
 
         // Load inventory data
+        // The attendance system does not track stock/inventory - show honest
+        // status instead of fabricated stock levels.
         function loadInventoryData() {
             const container = document.getElementById('inventoryContent');
 
-            // Mock inventory data for demonstration
-            const mockInventory = [
-                {
-                    item: 'Product A',
-                    current: 45,
-                    minimum: 50,
-                    status: 'low',
-                    supplier: 'Supplier X'
-                },
-                {
-                    item: 'Product B',
-                    current: 120,
-                    minimum: 100,
-                    status: 'good',
-                    supplier: 'Supplier Y'
-                },
-                {
-                    item: 'Product C',
-                    current: 25,
-                    minimum: 30,
-                    status: 'low',
-                    supplier: 'Supplier Z'
-                },
-                {
-                    item: 'Product D',
-                    current: 200,
-                    minimum: 150,
-                    status: 'good',
-                    supplier: 'Supplier X'
-                }
-            ];
-
-            const inventoryHtml = mockInventory.map(item => `
+            container.innerHTML = `
                 <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
-                                <h6 class="mb-1">${item.item}</h6>
-                                <small class="text-muted">Supplier: ${item.supplier}</small>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-2">
-                                    <small class="text-muted">Current: ${item.current} | Min: ${item.minimum}</small>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-${item.status === 'good' ? 'success' : 'warning'}" style="width: ${(item.current / (item.minimum * 1.5)) * 100}%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <span class="badge bg-${item.status === 'good' ? 'success' : 'warning'}">${item.status.toUpperCase()}</span>
-                            </div>
-                        </div>
+                    <div class="card-body text-center text-muted">
+                        <i class="fas fa-boxes fa-2x mb-3"></i>
+                        <h6 class="mb-1">Inventory Tracking Not Integrated</h6>
+                        <p class="mb-0">This attendance system does not manage stock levels. Connect an inventory/POS provider to display real stock data here.</p>
                     </div>
                 </div>
-            `).join('');
-
-            container.innerHTML = inventoryHtml;
+            `;
         }
 
         // Update current time
@@ -3028,14 +2966,9 @@
                         }
                     }
 
-                    // Fallback for demo/development
-                    showNotification('All users cleared from local storage (demo mode)', 'warning');
-                    // Clear localStorage user data
-                    Object.keys(localStorage).forEach(key => {
-                        if (key.includes('user') || key.includes('User')) {
-                            localStorage.removeItem(key);
-                        }
-                    });
+                    // Honest error - never pretend success
+                    console.error('Clear users failed:', result);
+                    showNotification(result.message || 'Failed to clear users', 'error');
 
                 } catch (error) {
                     hideProcessingModal();
@@ -3632,6 +3565,15 @@
                                                 <input type="email" class="form-control" id="newUserEmail" required>
                                             </div>
                                             <div class="mb-3">
+                                                <label class="form-label">Phone</label>
+                                                <input type="tel" class="form-control" id="newUserPhone" placeholder="0000000000">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Temporary Password *</label>
+                                                <input type="text" class="form-control" id="newUserPassword" minlength="6" required>
+                                                <small class="text-muted">Share with the staff member for their first login</small>
+                                            </div>
+                                            <div class="mb-3">
                                                 <label class="form-label">Role</label>
                                                 <select class="form-select" id="newUserRole">
                                                     <option value="staff">Staff Member</option>
@@ -3697,12 +3639,15 @@
                     }
                 }
 
-                // Fallback demo data
-                displayUsers(getDemoUsers());
+                // Honest error - never show fake staff
+                console.error('Failed to load staff list');
+                displayUsers([]);
+                showNotification('Could not load staff members. Please check the server.', 'error');
 
             } catch (error) {
                 console.error('Error loading users:', error);
-                displayUsers(getDemoUsers());
+                displayUsers([]);
+                showNotification('Could not load staff members. Please check the server.', 'error');
             }
         }
 
@@ -3751,21 +3696,20 @@
             `).join('');
         }
 
-        function getDemoUsers() {
-            return [
-                { id: '1', name: 'John Smith', email: 'john@store.com', role: 'Manager', department: 'Sales', status: 'active' },
-                { id: '2', name: 'Sarah Johnson', email: 'sarah@store.com', role: 'Staff', department: 'Customer Service', status: 'active' },
-                { id: '3', name: 'Mike Chen', email: 'mike@store.com', role: 'Staff', department: 'Inventory', status: 'active' }
-            ];
-        }
-
         async function addNewUser() {
             const userData = {
                 name: document.getElementById('newUserName').value,
                 email: document.getElementById('newUserEmail').value,
+                phone: document.getElementById('newUserPhone').value,
+                password: document.getElementById('newUserPassword').value,
                 role: document.getElementById('newUserRole').value,
                 department: document.getElementById('newUserDepartment').value
             };
+
+            if (!userData.password || userData.password.length < 6) {
+                showNotification('Temporary password is required (min 6 characters)', 'error');
+                return;
+            }
 
             try {
                 const token = getAuthToken();
@@ -3778,20 +3722,19 @@
                     body: JSON.stringify(userData)
                 });
 
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success) {
-                        showNotification('Staff member added successfully!', 'success');
-                        document.getElementById('addUserForm').reset();
-                        loadUsersList();
-                        return;
-                    }
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok && result.success) {
+                    const staffId = result.user?.digital_id || '';
+                    showNotification(`Staff member created! Digital ID: ${staffId}`, 'success');
+                    document.getElementById('addUserForm').reset();
+                    loadUsersList();
+                    return;
                 }
 
-                // Fallback for demo
-                showNotification('Staff member added successfully (demo mode)!', 'success');
-                document.getElementById('addUserForm').reset();
-                loadUsersList();
+                // Honest error - never pretend success
+                console.error('Add staff failed:', result);
+                showNotification(result.message || 'Failed to create staff member', 'error');
 
             } catch (error) {
                 console.error('Error adding user:', error);
@@ -3932,12 +3875,15 @@
                     }
                 }
 
-                // Fallback demo data
-                displayActiveQRCodes(getDemoQRCodes());
+                // Honest error - never show fake QR codes
+                console.error('Failed to load QR codes');
+                displayActiveQRCodes([]);
+                showNotification('Could not load QR codes. Please check the server.', 'error');
 
             } catch (error) {
                 console.error('Error loading QR codes:', error);
-                displayActiveQRCodes(getDemoQRCodes());
+                displayActiveQRCodes([]);
+                showNotification('Could not load QR codes. Please check the server.', 'error');
             }
         }
 
@@ -3973,13 +3919,6 @@
             `).join('');
         }
 
-        function getDemoQRCodes() {
-            return [
-                { id: '1', location: 'Main Entrance', purpose: 'Check In', expiry: new Date(Date.now() + 15 * 60 * 1000) },
-                { id: '2', location: 'Cashier Station', purpose: 'Check Out', expiry: new Date(Date.now() + 10 * 60 * 1000) }
-            ];
-        }
-
         async function generateNewQRCode() {
             const location = document.getElementById('qrLocation').value;
             const purpose = document.getElementById('qrPurpose').value;
@@ -4006,10 +3945,8 @@
                     }
                 }
 
-                // Fallback for demo
-                showNotification('QR code generated successfully!', 'success');
-                document.getElementById('generateQRForm').reset();
-                loadActiveQRCodes();
+                // API call failed - show error
+                showNotification('Failed to generate QR code. Please try again.', 'error');
 
             } catch (error) {
                 console.error('Error generating QR code:', error);
@@ -4092,12 +4029,15 @@
                     }
                 }
 
-                // Fallback demo data
-                displayPendingApprovals(getDemoPendingPunches());
+                // Honest error - never show fake approvals
+                console.error('Failed to load pending approvals');
+                displayPendingApprovals([]);
+                showNotification('Could not load pending approvals. Please check the server.', 'error');
 
             } catch (error) {
                 console.error('Error loading pending approvals:', error);
-                displayPendingApprovals(getDemoPendingPunches());
+                displayPendingApprovals([]);
+                showNotification('Could not load pending approvals. Please check the server.', 'error');
             }
         }
 
@@ -4146,27 +4086,6 @@
             `).join('');
         }
 
-        function getDemoPendingPunches() {
-            return [
-                {
-                    id: '1',
-                    userName: 'John Smith',
-                    userId: 'EMP001',
-                    punchType: 'in',
-                    requestedTime: new Date(Date.now() - 30 * 60 * 1000),
-                    reason: 'Arrived late due to traffic'
-                },
-                {
-                    id: '2',
-                    userName: 'Sarah Johnson',
-                    userId: 'EMP002',
-                    punchType: 'out',
-                    requestedTime: new Date(Date.now() - 15 * 60 * 1000),
-                    reason: 'Left early for medical appointment'
-                }
-            ];
-        }
-
         async function approvePunch(punchId) {
             try {
                 const token = getAuthToken();
@@ -4181,9 +4100,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('Punch approved successfully (demo mode)!', 'success');
-                loadPendingApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to approve punch: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error approving punch:', error);
@@ -4212,9 +4131,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('Punch rejected (demo mode)', 'warning');
-                loadPendingApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to reject punch: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error rejecting punch:', error);
@@ -4238,9 +4157,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('All pending punches approved (demo mode)!', 'success');
-                loadPendingApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to approve all punches: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error approving all punches:', error);
@@ -5480,9 +5399,9 @@
                     }
                 }
 
-                // Fallback for demo
-                showNotification(`Quick ${type.replace('_', ' ')} recorded (demo mode)!`, 'success');
-                loadDashboardData();
+                // Honest error - punch requires a real server connection
+                console.error('Quick punch failed');
+                showNotification('Could not record punch. Please check the server.', 'error');
 
             } catch (error) {
                 console.error('Quick punch error:', error);

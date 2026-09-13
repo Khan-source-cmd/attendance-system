@@ -221,20 +221,20 @@
     <div class="container">
       <div class="row text-center">
         <div class="col-md-3">
-          <span class="stat-number" data-target="0">0</span>
+          <span class="stat-number" id="statActiveUsers" data-target="0">0</span>
           <p class="mb-0">Active Users</p>
         </div>
         <div class="col-md-3">
-          <span class="stat-number" data-target="0">0</span>
+          <span class="stat-number" id="statIndustries" data-target="0">0</span>
           <p class="mb-0">Industries Served</p>
         </div>
         <div class="col-md-3">
-          <span class="stat-number" data-target="0">0</span>
+          <span class="stat-number" id="statUptime" data-target="0">0</span>
           <p class="mb-0">% Uptime</p>
         </div>
         <div class="col-md-3">
-          <span class="stat-number" data-target="0">0</span>
-          <p class="mb-0">Countries</p>
+          <span class="stat-number" id="statActiveToday" data-target="0">0</span>
+          <p class="mb-0">Active Today</p>
         </div>
       </div>
     </div>
@@ -462,6 +462,39 @@
 
   <script src="/vendor/bootstrap.bundle.min.js"></script>
   <script>
+    // API base (mirrors the pattern used across the app)
+    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:4000'
+      : `http://${window.location.hostname}:4000`;
+
+    // Stat card element ids -> backend stats fields
+    const STAT_FIELDS = {
+      statActiveUsers: 'activeUsers',
+      statIndustries: 'industriesServed',
+      statUptime: 'uptimePercent',
+      statActiveToday: 'activeToday'
+    };
+
+    // Fetch real metrics from the backend, then animate the counters.
+    async function loadStats() {
+      try {
+        const response = await fetch(`${API_BASE}/api/stats`);
+        const data = await response.json();
+        if (data && data.stats) {
+          document.querySelectorAll('.stat-number').forEach(counter => {
+            const field = STAT_FIELDS[counter.id];
+            const value = data.stats[field];
+            if (typeof value === 'number' && Number.isFinite(value)) {
+              counter.setAttribute('data-target', Math.round(value));
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Could not load live stats, using defaults:', error);
+      }
+      animateCounters();
+    }
+
     // Animated counter for stats
     function animateCounters() {
       const counters = document.querySelectorAll('.stat-number');
@@ -489,7 +522,7 @@
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          animateCounters();
+          loadStats();
           observer.disconnect();
         }
       });

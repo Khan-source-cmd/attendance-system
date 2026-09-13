@@ -283,8 +283,9 @@ class AuthManager {
                     });
                 }
 
-                // Also store in sessionStorage for pages that don't have the app object (like register.html)
-                // Use consistent field naming for better compatibility
+                // Also store in sessionStorage + localStorage for pages that read either one.
+                // localStorage survives new tabs / new windows, sessionStorage only the current tab,
+                // so writing BOTH prevents false "not logged in" redirects to register.html.
                 if (typeof window !== 'undefined' && window.sessionStorage) {
                     sessionStorage.setItem('token', response.token);
                     sessionStorage.setItem('digitalid', response.digital_id);
@@ -295,6 +296,17 @@ class AuthManager {
                     sessionStorage.setItem('industry', response.industry_type || ''); // Add simple version
                     sessionStorage.setItem('organization_id', response.organization_id || '');
                     sessionStorage.setItem('organization_name', response.organization_name || '');
+                }
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    localStorage.setItem('token', response.token);
+                    localStorage.setItem('digitalid', response.digital_id);
+                    localStorage.setItem('role', response.role || 'user');
+                    localStorage.setItem('name', response.name || '');
+                    localStorage.setItem('industrytype', response.industry_type || '');
+                    localStorage.setItem('industry_type', response.industry_type || '');
+                    localStorage.setItem('industry', response.industry_type || '');
+                    localStorage.setItem('organization_id', response.organization_id || '');
+                    localStorage.setItem('organization_name', response.organization_name || '');
                 }
 
                 return {

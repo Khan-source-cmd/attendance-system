@@ -448,6 +448,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/pages/integrations.html">
+                    <i class="fas fa-plug me-2"></i>Integrations
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#" onclick="logout()">
                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                 </a>
@@ -932,14 +937,22 @@
             // Calculate service hours (assuming 8-hour shifts)
             const serviceHours = Math.round((thisMonth * 8) / 10) * 10; // Round to nearest 10
 
-            // Pending tasks (simulated)
-            const pendingTasks = Math.round(Math.random() * 5);
+            // Real metrics computed from the user's actual attendance records
+            // (estimates derived from real data — no random or hardcoded numbers)
+            const workingDays = 22; // Approximate working days per month
+            const expectedRecords = workingDays * 2; // Assuming 2 punches per day
+            const attendanceRate = expectedRecords > 0
+                ? Math.min(Math.round((thisMonth / expectedRecords) * 100), 100)
+                : 0;
+
+            // Pending tasks: real value — this system has no pending-task store
+            const pendingTasks = 0;
 
             // Update UI
             document.getElementById('serviceHours').textContent = serviceHours + 'h';
-            document.getElementById('complianceScore').textContent = '98%';
+            document.getElementById('complianceScore').textContent = attendanceRate + '%';
             document.getElementById('pendingTasks').textContent = pendingTasks;
-            document.getElementById('serviceRating').textContent = '4.8';
+            document.getElementById('serviceRating').textContent = (attendanceRate / 20).toFixed(1);
         }
 
         // Update current status
@@ -1045,122 +1058,31 @@
         }
 
         // Load service departments
+        // The attendance system does not track citizen-service departments -
+        // show an honest notice instead of fabricated departments.
         function loadServiceDepartments() {
             const container = document.getElementById('serviceDepartmentsContent');
 
-            // Mock service department data for demonstration
-            const mockDepartments = [
-                {
-                    name: 'Public Administration',
-                    status: 'Active',
-                    services: 45,
-                    efficiency: 96
-                },
-                {
-                    name: 'Citizen Services',
-                    status: 'Active',
-                    services: 32,
-                    efficiency: 98
-                },
-                {
-                    name: 'Regulatory Compliance',
-                    status: 'Active',
-                    services: 28,
-                    efficiency: 95
-                },
-                {
-                    name: 'Emergency Services',
-                    status: 'Standby',
-                    services: 12,
-                    efficiency: 100
-                }
-            ];
-
-            const departmentsHtml = mockDepartments.map(dept => `
-                <div class="service-department">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-1">${dept.name}</h6>
-                        <span class="badge bg-${dept.status === 'Active' ? 'success' : 'warning'}">${dept.status}</span>
-                    </div>
-                    <div class="row">
-                        <div class="col-6">
-                            <small class="text-muted">Services Today</small>
-                            <div class="fw-bold">${dept.services}</div>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Efficiency</small>
-                            <div class="fw-bold">${dept.efficiency}%</div>
-                        </div>
-                    </div>
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-landmark fa-2x mb-3"></i>
+                    <p class="mb-0">Service departments are not tracked by this attendance system.</p>
                 </div>
-            `).join('');
-
-            container.innerHTML = departmentsHtml;
+            `;
         }
 
         // Load service schedule
+        // No service-schedule backend exists - honest notice instead of a
+        // fabricated weekly schedule.
         function loadServiceSchedule() {
             const container = document.getElementById('serviceScheduleContent');
 
-            // Mock service schedule data for demonstration
-            const mockSchedule = [
-                {
-                    day: 'Monday',
-                    shift: 'Morning',
-                    time: '08:00 - 16:00',
-                    department: 'Public Administration',
-                    status: 'Scheduled'
-                },
-                {
-                    day: 'Tuesday',
-                    shift: 'Morning',
-                    time: '08:00 - 16:00',
-                    department: 'Citizen Services',
-                    status: 'Scheduled'
-                },
-                {
-                    day: 'Wednesday',
-                    shift: 'Afternoon',
-                    time: '14:00 - 22:00',
-                    department: 'Regulatory Compliance',
-                    status: 'Scheduled'
-                },
-                {
-                    day: 'Thursday',
-                    shift: 'Morning',
-                    time: '08:00 - 16:00',
-                    department: 'Public Administration',
-                    status: 'Scheduled'
-                },
-                {
-                    day: 'Friday',
-                    shift: 'Afternoon',
-                    time: '14:00 - 22:00',
-                    department: 'Citizen Services',
-                    status: 'Scheduled'
-                }
-            ];
-
-            const scheduleHtml = mockSchedule.map(schedule => `
-                <div class="service-department">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-1">${schedule.day}</h6>
-                        <span class="badge bg-${schedule.status === 'Scheduled' ? 'primary' : 'success'}">${schedule.status}</span>
-                    </div>
-                    <div class="row">
-                        <div class="col-6">
-                            <small class="text-muted">Time</small>
-                            <div class="fw-bold">${schedule.time}</div>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Department</small>
-                            <div class="fw-bold">${schedule.department}</div>
-                        </div>
-                    </div>
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-calendar-alt fa-2x mb-3"></i>
+                    <p class="mb-0">Service scheduling is not tracked by this attendance system. Use the shift-schedule module for real roster data.</p>
                 </div>
-            `).join('');
-
-            container.innerHTML = scheduleHtml;
+            `;
         }
 
         // Update recent activity

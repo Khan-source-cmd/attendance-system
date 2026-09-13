@@ -412,13 +412,11 @@ async function loadTeacherFeatures() {
         displayTeacherDashboard();
       }
     } else {
-      // Fallback demo data
-      teacherClasses = [
-        { id: 1, classname: 'CS101', subject: 'Introduction to Programming', scheduletime: '09:00-10:30', studentcount: 25 },
-        { id: 2, classname: 'CS201', subject: 'Data Structures', scheduletime: '11:00-12:30', studentcount: 20 }
-      ];
+      // Honest empty state: no fabricated classes when the API fails
+      teacherClasses = [];
       updateTeacherStats();
       displayTeacherDashboard();
+      showNotification('Could not load classes from the server.', 'error');
     }
   } catch (error) {
     console.error('Teacher features load error:', error);
@@ -437,7 +435,7 @@ function updateTeacherStats() {
   if (elements.totalClasses) elements.totalClasses.textContent = teacherClasses.length;
   if (elements.totalStudents) elements.totalStudents.textContent = teacherClasses.reduce((sum, cls) => sum + (cls.studentcount || 0), 0);
   if (elements.todayClasses) elements.todayClasses.textContent = teacherClasses.length;
-  if (elements.avgAttendance) elements.avgAttendance.textContent = '87%';
+  if (elements.avgAttendance) elements.avgAttendance.textContent = teacherClasses.length ? '—' : '0%';
 }
 
 // Display teacher dashboard
@@ -513,9 +511,9 @@ async function loadDashboardData() {
       }
     } else {
       console.warn('Personal attendance data load failed');
-      const demoHistory = getDemoHistoryData();
-      updateDashboardStats(demoHistory);
-      updateCurrentStatus(demoHistory);
+      // No demo fallback: show real (empty) state instead of fabricated history
+      updateDashboardStats([]);
+      updateCurrentStatus([]);
     }
 
     // Load organization-wide activity for recent activity
@@ -535,10 +533,9 @@ async function loadDashboardData() {
       alert('Your session has expired. Please login again.');
       window.location.href = '/pages/register.html';
     } else {
-      // Use demo data as fallback
-      const demoHistory = getDemoHistoryData();
-      updateDashboardStats(demoHistory);
-      updateCurrentStatus(demoHistory);
+      // No demo fallback: show real (empty) state instead of fabricated history
+      updateDashboardStats([]);
+      updateCurrentStatus([]);
       updateRecentActivity([]);
       // Still try to display organization details
       displayCurrentOrganization();
@@ -546,29 +543,55 @@ async function loadDashboardData() {
   }
 }
 
-// Load organization-wide activity for admin view
+// Load organization-wide activity for admin view (REAL data from attendance-monitor)
 async function loadOrganizationActivity() {
   try {
     const token = getAuthToken();
-    // Skip API call for admin endpoints that don't exist
-    console.log('Admin organization-activity endpoint not available, using demo data');
-    updateRecentActivity(getDemoOrganizationActivity());
+    const response = await fetch(`${API_BASE}/api/attendance-monitor`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      const records = result.recent_records || result.records || result.attendance || result.history || [];
+
+      // Map real records into the activity feed shape (no fabricated people/actions)
+      const activities = records.slice(0, 8).map(r => ({
+        id: r.id,
+        userName: r.name || r.username || r.digitalid || r.digital_id || 'Unknown',
+        userRole: r.role || 'User',
+        userId: r.digitalid || r.digital_id || r.user_id || 'N/A',
+        action: r.punchtype === 'in' ? 'punched in'
+              : r.punchtype === 'out' ? 'punched out'
+              : r.punchtype === 'break_start' ? 'started break'
+              : r.punchtype === 'break_end' ? 'ended break'
+              : (r.punchtype || r.punch_type || 'activity'),
+        punchtype: r.punchtype || r.punch_type,
+        timestamp: r.timestamp,
+        location: r.location ? 'Verified location' : 'Not specified'
+      }));
+
+      updateRecentActivity(activities);
+      return;
+    }
+    console.warn('Attendance-monitor unavailable, showing empty activity');
+    updateRecentActivity([]);
   } catch (error) {
     console.error('Organization activity load error:', error);
-    updateRecentActivity(getDemoOrganizationActivity());
+    updateRecentActivity([]);
   }
 }
 
-// Load organization statistics
+// Load organization statistics from REAL endpoints (no demo data)
 async function loadOrganizationStats() {
   try {
-    const token = getAuthToken();
-    // Skip API call for admin endpoints that don't exist
-    console.log('Admin organization-stats endpoint not available, using demo data');
-    updateOrganizationStats(getDemoOrganizationStats());
+    await loadRealTimeOrganizationStats();
   } catch (error) {
     console.error('Organization stats load error:', error);
-    updateOrganizationStats(getDemoOrganizationStats());
+    updateOrganizationStats({ totalUsers: 0, activeUsers: 0, totalClasses: 0, pendingRequests: 0 });
   }
 }
 
@@ -583,20 +606,43 @@ async function loadRealTimeOrganizationStats() {
       }
     });
 
+    let stats = { totalUsers: 0, activeUsers: 0, totalClasses: 0, pendingRequests: 0, activeUsersWeek: 0, totalRecords: 0 };
+
     if (response.ok) {
       const result = await response.json();
       if (result.success) {
-        const stats = calculateOrganizationStats(result.history);
-        updateOrganizationStats(stats);
-      } else {
-        updateOrganizationStats(getDemoOrganizationStats());
+        stats = calculateOrganizationStats(result.history);
       }
-    } else {
-      updateOrganizationStats(getDemoOrganizationStats());
     }
+
+    // Enrich with REAL pending requests count and REAL classes count
+    try {
+      const pendingResp = await fetch(`${API_BASE}/api/pending-requests`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (pendingResp.ok) {
+        const pendingResult = await pendingResp.json();
+        const pendingList = pendingResult.requests || pendingResult.pending || pendingResult.data || [];
+        stats.pendingRequests = Array.isArray(pendingList) ? pendingList.filter(r => r.status === 'pending' || !r.status).length : (pendingResult.count || 0);
+      }
+    } catch (e) { console.warn('Pending requests count unavailable:', e.message); }
+
+    try {
+      const classesResp = await fetch(`${API_BASE}/api/classes`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (classesResp.ok) {
+        const classesResult = await classesResp.json();
+        const classList = classesResult.classes || classesResult.data || [];
+        stats.totalClasses = Array.isArray(classList) ? classList.length : (classesResult.count || 0);
+      }
+    } catch (e) { console.warn('Classes count unavailable:', e.message); }
+
+    updateOrganizationStats(stats);
   } catch (error) {
     console.error('Real-time stats calculation error:', error);
-    updateOrganizationStats(getDemoOrganizationStats());
+    // Honest zeros on failure - never fabricated numbers
+    updateOrganizationStats({ totalUsers: 0, activeUsers: 0, totalClasses: 0, pendingRequests: 0 });
   }
 }
 
@@ -648,11 +694,11 @@ function calculateOrganizationStats(attendanceHistory) {
   // Total unique users
   const totalUsers = Object.keys(userActivity).length;
 
-  // Pending requests (simulate based on recent activity)
-  const pendingRequests = Math.floor(Math.random() * 5) + 1; // 1-5 pending requests
-
-  // Classes (estimate based on attendance patterns)
-  const totalClasses = Math.max(1, Math.floor(totalUsers / 25)); // Assume ~25 students per class
+  // Pending requests & classes are fetched from REAL endpoints
+  // (/api/pending-requests, /api/classes) in loadRealTimeOrganizationStats().
+  // Defaults here are honest zeros, never simulated.
+  const pendingRequests = 0;
+  const totalClasses = 0;
 
   return {
     totalUsers: totalUsers,
@@ -672,93 +718,7 @@ function updateOrganizationStats(stats) {
   document.getElementById('pendingRequests').textContent = stats.pendingRequests || 0;
 }
 
-// Demo organization stats
-function getDemoOrganizationStats() {
-  return {
-    totalUsers: 245,
-    activeUsers: 89,
-    totalClasses: 42,
-    pendingRequests: 7
-  };
-}
 
-// Demo organization activity data
-function getDemoOrganizationActivity() {
-  const activities = [];
-  const users = [
-    { name: 'Dr. Sarah Johnson', role: 'Teacher', id: 'EDU-TCH-0001' },
-    { name: 'Mike Chen', role: 'Student', id: 'EDU-STU-0005' },
-    { name: 'Prof. Emily Rodriguez', role: 'Teacher', id: 'EDU-TCH-0002' },
-    { name: 'Alex Kumar', role: 'Student', id: 'EDU-STU-0012' },
-    { name: 'Dr. Robert Davis', role: 'Teacher', id: 'EDU-TCH-0003' }
-  ];
-
-  for (let i = 0; i < 8; i++) {
-    const user = users[Math.floor(Math.random() * users.length)];
-    const actions = ['punched in', 'punched out', 'started break', 'ended break', 'marked attendance', 'joined class'];
-    const action = actions[Math.floor(Math.random() * actions.length)];
-
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - (i * 15)); // Spread over last 2 hours
-
-    activities.push({
-      id: `org_${i}`,
-      userName: user.name,
-      userRole: user.role,
-      userId: user.id,
-      action: action,
-      timestamp: now.toISOString(),
-      location: 'Campus Main Building'
-    });
-  }
-
-  return activities;
-}
-
-// Generate demo history data
-function getDemoHistoryData() {
-  const data = [];
-  const today = new Date();
-  
-  for (let i = 0; i < 20; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    
-    // Morning punch in
-    const morningTime = new Date(date);
-    morningTime.setHours(9, Math.floor(Math.random() * 30), 0, 0);
-    
-    data.push({
-      id: `demo_${i * 2}`,
-      timestamp: morningTime.toISOString(),
-      punchtype: 'in',
-      attendancemethod: ['manual', 'gps', 'qr'][Math.floor(Math.random() * 3)],
-      locationdata: JSON.stringify({
-        latitude: 19.0760 + Math.random() * 0.01,
-        longitude: 72.8777 + Math.random() * 0.01
-      }),
-      notes: ['Admin check-in', 'Started work', 'Morning shift'][Math.floor(Math.random() * 3)]
-    });
-    
-    // Evening punch out
-    const eveningTime = new Date(date);
-    eveningTime.setHours(17 + Math.floor(Math.random() * 2), Math.floor(Math.random() * 60), 0, 0);
-    
-    data.push({
-      id: `demo_${i * 2 + 1}`,
-      timestamp: eveningTime.toISOString(),
-      punchtype: 'out',
-      attendancemethod: ['manual', 'gps', 'qr'][Math.floor(Math.random() * 3)],
-      locationdata: JSON.stringify({
-        latitude: 19.0760 + Math.random() * 0.01,
-        longitude: 72.8777 + Math.random() * 0.01
-      }),
-      notes: ['Admin check-out', 'End of shift', 'Work completed'][Math.floor(Math.random() * 3)]
-    });
-  }
-  
-  return data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-}
 
 // Update dashboard statistics
 function updateDashboardStats(history) {
@@ -1216,12 +1176,8 @@ async function takeClassAttendance(classId) {
     document.getElementById('modalClassName').textContent = selectedClass.classname;
     document.getElementById('classDetails').textContent = `${selectedClass.subject} - ${selectedClass.scheduletime}`;
 
-    // Load students for this class (demo data for now)
-    currentClassStudents = [
-      { id: 1, name: 'John Smith', rollnumber: 'CS001', ispresent: null },
-      { id: 2, name: 'Jane Doe', rollnumber: 'CS002', ispresent: null },
-      { id: 3, name: 'Mike Johnson', rollnumber: 'CS003', ispresent: null }
-    ];
+    // Load students for this class
+    currentClassStudents = [];
 
     displayStudentsInModal();
 
@@ -2443,11 +2399,13 @@ async function loadPendingUsers() {
       }
     }
 
-    // Fallback to demo data if API fails
-    displayPendingUsers(getDemoPendingUsers());
+    // Honest fallback: empty state + error, never simulated data
+    displayPendingUsers([]);
+    showNotification('Could not load pending users. Please try again.', 'error');
   } catch (error) {
     console.error('Error loading pending users:', error);
-    displayPendingUsers(getDemoPendingUsers());
+    displayPendingUsers([]);
+    showNotification('Error loading pending users. Please try again.', 'error');
   }
 }
 
@@ -2503,46 +2461,7 @@ function displayPendingUsers(users) {
   `).join('');
 }
 
-function getDemoPendingUsers() {
-  return [
-    {
-      id: 'user_001',
-      digital_id: 'HEA-DOC-0001',
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@hospital.com',
-      phone: '+1-555-0101',
-      role: 'Doctor',
-      industry_type: 'Healthcare',
-      organization_name: 'City General Hospital',
-      organization_code: 'HOSP-2025',
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
-    },
-    {
-      id: 'user_002',
-      digital_id: 'EDU-TCH-0001',
-      name: 'Prof. Michael Chen',
-      email: 'm.chen@university.edu',
-      phone: '+1-555-0102',
-      role: 'Teacher',
-      industry_type: 'Education',
-      organization_name: 'State University',
-      organization_code: 'UNIV-2025',
-      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() // 4 hours ago
-    },
-    {
-      id: 'user_003',
-      digital_id: 'CORP-MGR-0001',
-      name: 'Emily Rodriguez',
-      email: 'emily.rodriguez@techcorp.com',
-      phone: '+1-555-0103',
-      role: 'Manager',
-      industry_type: 'Corporate',
-      organization_name: 'TechCorp Solutions',
-      organization_code: 'TECH-2025',
-      created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() // 6 hours ago
-    }
-  ];
-}
+
 
 async function viewUserDetails(userId) {
   try {
@@ -2562,10 +2481,10 @@ async function viewUserDetails(userId) {
       }
     }
 
-    // Fallback to demo data
+    // Honest fallback: no fabricated user data
     if (!userData) {
-      const demoUsers = getDemoPendingUsers();
-      userData = demoUsers.find(u => u.id === userId) || demoUsers[0];
+      showNotification('Could not load user details from the server.', 'error');
+      return;
     }
 
     // Populate user details modal
@@ -2630,11 +2549,6 @@ async function approveUser() {
       }
     }
 
-    // Fallback for demo/development
-    showNotification('User registration approved successfully!', 'success');
-    bootstrap.Modal.getInstance(document.getElementById('userDetailsModal')).hide();
-    await loadPendingUsers();
-
   } catch (error) {
     console.error('Error approving user:', error);
     showNotification('Error approving user registration', 'error');
@@ -2677,11 +2591,6 @@ async function rejectUser() {
       }
     }
 
-    // Fallback for demo/development
-    showNotification('User registration rejected', 'info');
-    bootstrap.Modal.getInstance(document.getElementById('userDetailsModal')).hide();
-    await loadPendingUsers();
-
   } catch (error) {
     console.error('Error rejecting user:', error);
     showNotification('Error rejecting user registration', 'error');
@@ -2719,10 +2628,6 @@ async function quickRejectUser(userId) {
         return;
       }
     }
-
-    // Fallback for demo/development
-    showNotification('User registration rejected', 'info');
-    await loadPendingUsers();
 
   } catch (error) {
     console.error('Error rejecting user:', error);
@@ -3148,13 +3053,13 @@ async function loadOrganizationData() {
       }
     }
 
-    // Fallback to localStorage if API fails
+    // Honest fallback: use cached localStorage, never simulated org data
     console.log('Backend API failed, falling back to localStorage');
     const savedOrg = getSavedOrganization();
     if (savedOrg) {
       populateOrganizationForm(savedOrg);
     } else {
-      populateOrganizationForm(getDemoOrganizationData());
+      showNotification('Could not load organization data from the server.', 'error');
     }
 
     // Load organization codes
@@ -3165,15 +3070,13 @@ async function loadOrganizationData() {
 
   } catch (error) {
     console.error('Error loading organization data:', error);
-    // Load from localStorage if available, otherwise demo data
+    // Honest fallback: cached data only, never simulated
     const savedOrg = getSavedOrganization();
     if (savedOrg) {
       populateOrganizationForm(savedOrg);
     } else {
-      populateOrganizationForm(getDemoOrganizationData());
+      showNotification('Error loading organization data. Please refresh.', 'error');
     }
-    displayOrganizationCodes(getDemoOrganizationCodes());
-    updateOrganizationStats(getDemoOrganizationStats());
   }
 }
 
@@ -3293,12 +3196,31 @@ function displayOrganizationCodes(codes) {
 async function loadOrganizationStats() {
   try {
     const token = getAuthToken();
-    // Skip API call for admin endpoints that don't exist
-    console.log('Admin organization-stats endpoint not available, using demo data');
-    updateOrganizationStats(getDemoOrganizationStats());
+    const response = await fetch(`${API_BASE}/api/organization/stats`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.stats) {
+        updateOrganizationStats({
+          totalUsers: result.stats.totalUsers || 0,
+          activeUsers: result.stats.activeToday || result.stats.recentLogins || 0,
+          // education classes and pending approvals load via /api/classes and /api/admin/pending-users
+          totalClasses: 0,
+          pendingRequests: 0
+        });
+        return;
+      }
+    }
+    // Honest fallback: zeros, never simulated
+    updateOrganizationStats({ totalUsers: 0, activeUsers: 0, totalClasses: 0, pendingRequests: 0 });
   } catch (error) {
     console.error('Error loading organization stats:', error);
-    updateOrganizationStats(getDemoOrganizationStats());
+    updateOrganizationStats({ totalUsers: 0, activeUsers: 0, totalClasses: 0, pendingRequests: 0 });
   }
 }
 
@@ -3637,43 +3559,7 @@ async function refreshOrganizationData() {
   showNotification('Form fields cleared', 'info');
 }
 
-// Demo data functions for development
-function getDemoOrganizationData() {
-  return {
-    name: 'TechCorp Solutions',
-    industry: 'corporate',
-    address: '123 Business Street, Tech City, TC 12345',
-    phone: '+1-555-0123',
-    email: 'admin@techcorp.com'
-  };
-}
 
-function getDemoOrganizationCodes() {
-  return [
-    {
-      id: 'code_001',
-      code: 'TECH-2025-A1B2C3',
-      created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days ago
-    },
-    {
-      id: 'code_002',
-      code: 'TECH-2025-D4E5F6',
-      created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days ago
-    },
-    {
-      id: 'code_003',
-      code: 'TECH-2025-G7H8I9',
-      created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() // 1 day ago
-    }
-  ];
-}
-
-function getDemoOrganizationStats() {
-  return {
-    totalUsers: 45,
-    activeCodes: 3
-  };
-}
 
 // Export the new functions
 window.showPendingApprovals = showPendingApprovals;

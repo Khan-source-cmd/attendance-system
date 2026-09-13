@@ -511,13 +511,15 @@ router.get('/basic', authenticateToken, (req, res) => {
   });
 });
 
-// Get organization statistics
-router.get('/stats', authenticateToken, requireAdmin, (req, res) => {
+// Get organization statistics (all authenticated users - team page shows real data)
+router.get('/stats', authenticateToken, (req, res) => {
   const organizationId = req.user.organization_id;
 
   // Get various organization statistics
   const queries = {
     totalUsers: `SELECT COUNT(*) as count FROM users WHERE organization_id = ? AND is_active = 1`,
+    activeToday: `SELECT COUNT(DISTINCT digital_id) as count FROM attendance WHERE organization_id = ? AND punch_type = 'in' AND DATE(timestamp) = DATE('now')`,
+    weekActiveUsers: `SELECT COUNT(DISTINCT digital_id) as count FROM attendance WHERE organization_id = ? AND punch_type = 'in' AND timestamp >= datetime('now', '-7 days')`,
     totalCodes: `SELECT COUNT(*) as count FROM organization_codes WHERE organization_id = ?`,
     activeCodes: `SELECT COUNT(*) as count FROM organization_codes WHERE organization_id = ? AND is_active = 1 AND (expires_at IS NULL OR expires_at > datetime('now'))`,
     totalCodeUsage: `SELECT SUM(usage_count) as count FROM organization_codes WHERE organization_id = ?`,
@@ -539,6 +541,14 @@ router.get('/stats', authenticateToken, requireAdmin, (req, res) => {
 
       completedQueries++;
       if (completedQueries === totalQueries) {
+        // Derived team stats for the integrations/team page
+        // recentLogins kept for backward compatibility with the frontend
+        stats.recentLogins = stats.activeToday || 0;
+        // Real attendance rate: % of active users who punched in during the last 7 days
+        stats.attendanceRate = stats.totalUsers > 0
+          ? Math.round((stats.weekActiveUsers / stats.totalUsers) * 100)
+          : 0;
+
         console.log(` Organization stats fetched for org: ${organizationId}`);
         res.json({
           success: true,
@@ -547,6 +557,26 @@ router.get('/stats', authenticateToken, requireAdmin, (req, res) => {
         });
       }
     });
+  });
+});
+
+// Get organization member directory (all authenticated users, non-sensitive fields only)
+router.get('/members', authenticateToken, (req, res) => {
+  const organizationId = req.user.organization_id;
+
+  req.db.all(`
+    SELECT digital_id, name, email, role, industry_type, is_active, is_verified, last_login
+    FROM users
+    WHERE organization_id = ? AND is_active = 1
+    ORDER BY CASE WHEN digital_id = ? THEN 0 ELSE 1 END, name COLLATE NOCASE
+  `, [organizationId, req.user.digital_id], (err, users) => {
+    if (err) {
+      console.error("❌ Organization members fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch members" });
+    }
+
+    console.log(` Organization members fetched for org: ${organizationId} (${users.length} members)`);
+    res.json({ success: true, members: users, count: users.length });
   });
 });
 

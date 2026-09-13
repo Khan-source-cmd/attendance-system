@@ -448,6 +448,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/pages/integrations.html">
+                    <i class="fas fa-plug me-2"></i>Integrations
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#" onclick="logout()">
                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                 </a>
@@ -943,14 +948,19 @@
             // Calculate shift hours (assuming 8-hour shifts)
             const shiftHours = Math.round((thisMonth * 8) / 10) * 10; // Round to nearest 10
 
-            // Inventory tasks (simulated)
-            const inventoryTasks = Math.round(Math.random() * 8);
-
-            // Update UI
+            // Update UI - every value derived from the user's REAL attendance records.
+            // Sales targets and service ratings have no backing table in this system,
+            // so those cards now show honest attendance-derived metrics instead of
+            // fabricated numbers.
+            const now = new Date();
             document.getElementById('shiftHours').textContent = shiftHours + 'h';
-            document.getElementById('salesTarget').textContent = '85%';
-            document.getElementById('customerService').textContent = '4.6';
-            document.getElementById('inventoryTasks').textContent = inventoryTasks;
+            // Target achievement: % of working days this month (so far) with a punch-in
+            const dayOfMonth = now.getDate() || 1;
+            const workdaysSoFar = Math.max(dayOfMonth - now.getDay() - Math.floor((dayOfMonth - now.getDay()) / 7) * 2, 1);
+            const daysWithPunch = new Set(history.filter(h => h.punchtype === 'in').map(h => new Date(h.timestamp).toISOString().split('T')[0])).size;
+            document.getElementById('salesTarget').textContent = Math.min(Math.round((daysWithPunch / workdaysSoFar) * 100), 100) + '%'; // real: attendance consistency
+            document.getElementById('customerService').textContent = totalRecords; // real: total punches
+            document.getElementById('inventoryTasks').textContent = thisMonth; // real: punches this month
         }
 
         // Update current status

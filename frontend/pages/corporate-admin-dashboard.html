@@ -1724,7 +1724,7 @@
                 <div class="productivity-card high">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-number" id="avgProductivity">85%</div>
+                            <div class="stat-number" id="avgProductivity">0%</div>
                             <div class="stat-label">Avg Productivity</div>
                         </div>
                         <div class="stat-icon" style="background: var(--success-gradient);">
@@ -2433,11 +2433,11 @@
                     return;
                 }
                 console.error('Dashboard data load error:', error);
-                // Show demo data if API fails
+                // Honest fallback on API failure - no fabricated productivity number
                 updateCorporateStats({
                     totalEmployees: 0,
                     activeProjects: 0,
-                    avgProductivity: '85%',
+                    avgProductivity: '0%',
                     pendingRequests: 0
                 });
                 updateRecentActivity([]);
@@ -2448,16 +2448,23 @@
         }
 
         // Update corporate-specific stats
+        // All KPIs derived from the REAL /api/admin/dashboard fields
+        // (totalUsers, activeUsers, pendingRequests) - nothing fabricated.
         function updateCorporateStats(data) {
-            document.getElementById('totalEmployees').textContent = data.totalEmployees || 0;
+            const totalEmployees = data.totalEmployees ?? data.totalUsers ?? 0;
+            const activeToday = data.activeUsers ?? 0;
+            // Real productivity proxy: % of active staff present today
+            const productivity = totalEmployees > 0 ? Math.round((activeToday / totalEmployees) * 100) : 0;
+
+            document.getElementById('totalEmployees').textContent = totalEmployees;
             document.getElementById('activeProjects').textContent = data.activeProjects || 0;
-            document.getElementById('avgProductivity').textContent = data.avgProductivity || '85%';
-            document.getElementById('pendingRequests').textContent = data.pendingRequests || 0;
+            document.getElementById('avgProductivity').textContent = productivity + '%';
+            document.getElementById('pendingRequests').textContent = data.pendingRequests ?? 0;
 
             // Update overview stats
-            document.getElementById('orgTotalEmployees').textContent = data.totalEmployees || 0;
+            document.getElementById('orgTotalEmployees').textContent = totalEmployees;
             document.getElementById('orgActiveProjects').textContent = data.activeProjects || 0;
-            document.getElementById('orgPendingRequests').textContent = data.pendingRequests || 0;
+            document.getElementById('orgPendingRequests').textContent = data.pendingRequests ?? 0;
         }
 
         // Update recent activity
@@ -2636,126 +2643,36 @@
         }
 
         // Load corporate projects
+        // The attendance system has no project-management backend - show an
+        // honest notice instead of fabricated projects.
         function loadCorporateProjects() {
             const container = document.getElementById('projectsContent');
 
-            // Mock project data for demonstration
-            const mockProjects = [
-                {
-                    name: 'Q4 Marketing Campaign',
-                    status: 'In Progress',
-                    progress: 75,
-                    deadline: 'Dec 31, 2024',
-                    team: 'Marketing Team',
-                    members: 8
-                },
-                {
-                    name: 'Product Launch Strategy',
-                    status: 'Planning',
-                    progress: 30,
-                    deadline: 'Jan 15, 2025',
-                    team: 'Product Team',
-                    members: 12
-                },
-                {
-                    name: 'HR System Upgrade',
-                    status: 'Review',
-                    progress: 90,
-                    deadline: 'Nov 15, 2024',
-                    team: 'HR & IT',
-                    members: 6
-                }
-            ];
-
-            const projectsHtml = mockProjects.map(project => `
+            container.innerHTML = `
                 <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <h6 class="mb-1">${project.name}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-users me-1"></i>${project.members} members •
-                                    <i class="fas fa-calendar me-1"></i>${project.deadline}
-                                </small>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-2">
-                                    <small class="text-muted">Progress</small>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-${project.status === 'In Progress' ? 'primary' : project.status === 'Planning' ? 'warning' : 'success'}" style="width: ${project.progress}%"></div>
-                                    </div>
-                                    <small class="text-muted">${project.progress}% complete</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2 text-end">
-                                <span class="badge bg-${project.status === 'In Progress' ? 'primary' : project.status === 'Planning' ? 'warning' : 'success'}">${project.status}</span>
-                            </div>
-                        </div>
+                    <div class="card-body text-center text-muted">
+                        <i class="fas fa-project-diagram fa-2x mb-3"></i>
+                        <h6 class="mb-1">Project Tracking Not Integrated</h6>
+                        <p class="mb-0">This attendance system does not manage projects. Connect a project-management provider to display real project data here.</p>
                     </div>
                 </div>
-            `).join('');
-
-            container.innerHTML = projectsHtml;
+            `;
         }
 
         // Load corporate meeting rooms
+        // No room-booking backend exists - show an honest notice.
         function loadCorporateMeetingRooms() {
             const container = document.getElementById('meetingRoomsContent');
 
-            // Mock meeting room data for demonstration
-            const mockRooms = [
-                {
-                    name: 'Conference Room A',
-                    capacity: 12,
-                    status: 'Available',
-                    nextBooking: '2:00 PM - 3:30 PM'
-                },
-                {
-                    name: 'Board Room',
-                    capacity: 20,
-                    status: 'Occupied',
-                    currentMeeting: 'Executive Meeting'
-                },
-                {
-                    name: 'Meeting Room 1',
-                    capacity: 6,
-                    status: 'Available',
-                    nextBooking: '4:00 PM - 5:00 PM'
-                },
-                {
-                    name: 'Meeting Room 2',
-                    capacity: 8,
-                    status: 'Maintenance',
-                    nextBooking: 'Available tomorrow'
-                }
-            ];
-
-            const roomsHtml = mockRooms.map(room => `
+            container.innerHTML = `
                 <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
-                                <h6 class="mb-1">${room.name}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-users me-1"></i>Capacity: ${room.capacity}
-                                </small>
-                            </div>
-                            <div class="col-md-4">
-                                <span class="badge bg-${room.status === 'Available' ? 'success' : room.status === 'Occupied' ? 'danger' : 'warning'} fs-6 px-3 py-2">
-                                    ${room.status}
-                                </span>
-                            </div>
-                            <div class="col-md-4">
-                                <small class="text-muted">
-                                    ${room.status === 'Occupied' ? `Current: ${room.currentMeeting}` : `Next: ${room.nextBooking}`}
-                                </small>
-                            </div>
-                        </div>
+                    <div class="card-body text-center text-muted">
+                        <i class="fas fa-door-open fa-2x mb-3"></i>
+                        <h6 class="mb-1">Meeting Room Booking Not Integrated</h6>
+                        <p class="mb-0">This attendance system does not manage room bookings. Connect a booking provider to display real room availability here.</p>
                     </div>
                 </div>
-            `).join('');
-
-            container.innerHTML = roomsHtml;
+            `;
         }
 
         // Load corporate productivity data
@@ -3323,13 +3240,9 @@
                     }
                 }
 
-                // Fallback demo data
-                select.innerHTML = `
-                    <option value="">Choose employee...</option>
-                    <option value="1">John Smith (john@company.com)</option>
-                    <option value="2">Sarah Johnson (sarah@company.com)</option>
-                    <option value="3">Mike Chen (mike@company.com)</option>
-                `;
+                // Real API failed - honest message, never fake employees
+                console.error('Employee list unavailable');
+                select.innerHTML = '<option value="">No employees available - please retry</option>';
 
             } catch (error) {
                 console.error('Error loading employees:', error);
@@ -3543,22 +3456,15 @@
                     }
                 }
 
-                // Fallback demo data
-                const demoCodes = [
-                    { id: '1', employeeName: 'John Smith', employeeId: 'EMP001', active: true, createdAt: new Date().toLocaleDateString(), lastUsed: '2 hours ago' },
-                    { id: '2', employeeName: 'Sarah Johnson', employeeId: 'EMP002', active: true, createdAt: new Date().toLocaleDateString(), lastUsed: 'Never' },
-                    { id: '3', employeeName: 'Mike Chen', employeeId: 'EMP003', active: false, createdAt: new Date().toLocaleDateString(), lastUsed: '1 day ago' }
-                ];
-                displayEmployeeQRCodes(demoCodes);
-                updateQRCodeStats(demoCodes);
+                // Real API failed - show honest empty state, never fake data
+                console.warn('QR codes API unsuccessful, showing empty list');
+                displayEmployeeQRCodes([]);
+                updateQRCodeStats([]);
 
             } catch (error) {
                 console.error('Error loading QR codes:', error);
-                const demoCodes = [
-                    { id: '1', employeeName: 'John Smith', employeeId: 'EMP001', active: true, createdAt: new Date().toLocaleDateString(), lastUsed: '2 hours ago' }
-                ];
-                displayEmployeeQRCodes(demoCodes);
-                updateQRCodeStats(demoCodes);
+                displayEmployeeQRCodes([]);
+                updateQRCodeStats([]);
             }
         }
 
@@ -3646,9 +3552,9 @@
                         return;
                     }
 
-                    // Fallback for demo
-                    showNotification('QR code deactivated successfully (demo mode)!', 'success');
-                    loadActiveEmployeeQRCodes();
+                    // Honest error — no fake success
+                    const err = await response.json().catch(() => ({}));
+                    showNotification(`Failed to deactivate QR code: ${err.message || 'Server error ' + response.status}`, 'error');
 
                 } catch (error) {
                     console.error('Error deactivating QR code:', error);
@@ -3724,40 +3630,13 @@
                     }
                 }
 
-                // Fallback demo data
-                const demoPunches = [
-                    {
-                        id: '1',
-                        employeeName: 'John Smith',
-                        employeeId: 'EMP001',
-                        punchType: 'in',
-                        requestedTime: new Date(Date.now() - 30 * 60 * 1000),
-                        reason: 'Arrived late due to traffic'
-                    },
-                    {
-                        id: '2',
-                        employeeName: 'Sarah Johnson',
-                        employeeId: 'EMP002',
-                        punchType: 'out',
-                        requestedTime: new Date(Date.now() - 15 * 60 * 1000),
-                        reason: 'Left early for medical appointment'
-                    }
-                ];
-                displayPendingEmployeePunchApprovals(demoPunches);
+                // Real API failed - show honest empty state, never fake data
+                console.warn('Manual punches API unsuccessful, showing empty list');
+                displayPendingEmployeePunchApprovals([]);
 
             } catch (error) {
                 console.error('Error loading pending approvals:', error);
-                const demoPunches = [
-                    {
-                        id: '1',
-                        employeeName: 'John Smith',
-                        employeeId: 'EMP001',
-                        punchType: 'in',
-                        requestedTime: new Date(Date.now() - 30 * 60 * 1000),
-                        reason: 'Arrived late due to traffic'
-                    }
-                ];
-                displayPendingEmployeePunchApprovals(demoPunches);
+                displayPendingEmployeePunchApprovals([]);
             }
         }
 
@@ -3820,9 +3699,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('Punch approved successfully (demo mode)!', 'success');
-                loadPendingEmployeePunchApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to approve punch: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error approving punch:', error);
@@ -3851,9 +3730,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('Punch rejected (demo mode)', 'warning');
-                loadPendingEmployeePunchApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to reject punch: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error rejecting punch:', error);
@@ -3877,9 +3756,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('All pending punches approved (demo mode)!', 'success');
-                loadPendingEmployeePunchApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to approve all punches: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error approving all punches:', error);

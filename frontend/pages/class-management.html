@@ -1570,37 +1570,9 @@
                         attendanceHistory = result.attendance || [];
                     }
                 } else {
-                    // Fallback demo data
-                    attendanceHistory = [
-                        {
-                            date: '2025-09-20',
-                            status: 'present',
-                            lecture_topic: 'Variables and Data Types',
-                            time: '09:00-10:30',
-                            notes: 'On time'
-                        },
-                        {
-                            date: '2025-09-18',
-                            status: 'present',
-                            lecture_topic: 'Introduction to Programming',
-                            time: '11:00-12:30',
-                            notes: 'Active participation'
-                        },
-                        {
-                            date: '2025-09-16',
-                            status: 'absent',
-                            lecture_topic: 'Basic Algorithms',
-                            time: '09:00-10:30',
-                            notes: 'Medical leave'
-                        },
-                        {
-                            date: '2025-09-13',
-                            status: 'present',
-                            lecture_topic: 'Control Structures',
-                            time: '11:00-12:30',
-                            notes: ''
-                        }
-                    ];
+                    // Real API failed - honest empty state, never fake records
+                    attendanceHistory = [];
+                    console.warn('Attendance history unavailable for student');
                 }
 
                 // Try to get student details from currentSubjectStudents if available

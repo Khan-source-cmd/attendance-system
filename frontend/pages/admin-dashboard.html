@@ -2050,7 +2050,7 @@
                     return;
                 }
                 console.error('Dashboard data load error:', error);
-                // Show demo data if API fails
+                // Honest fallback on API failure - real zeros, never fabricated data
                 updateDashboardStats({
                     totalUsers: 0,
                     activeUsers: 0,

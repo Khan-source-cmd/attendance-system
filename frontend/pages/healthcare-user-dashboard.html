@@ -433,6 +433,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/pages/integrations.html">
+                    <i class="fas fa-plug me-2"></i>Integrations
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#" onclick="logout()">
                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                 </a>
@@ -957,8 +962,11 @@
             // Calculate hours worked (assuming 8-hour shifts)
             const hoursWorked = Math.round((thisMonth * 8) / 10) * 10; // Round to nearest 10
 
-            // Compliance rate (simulated)
-            const complianceRate = Math.min(98, Math.max(85, 85 + Math.floor(Math.random() * 13)));
+            // Compliance rate derived from REAL punch completeness:
+            // % of check-ins that have a matching check-out (properly closed shifts)
+            const ins = history.filter(r => String(r.punchtype || r.punch_type || '').toLowerCase() === 'in').length;
+            const outs = history.filter(r => String(r.punchtype || r.punch_type || '').toLowerCase() === 'out').length;
+            const complianceRate = ins > 0 ? Math.round((outs / ins) * 100) : 0;
 
             // Calculate current streak
             const dailyAttendance = {};

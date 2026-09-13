@@ -30,6 +30,7 @@ class DashboardNavigation {
         this.clearConflictingDashboardData();
 
         this.setupNavigation();
+        this.fixDashboardLinks();
         this.updateUserInfo();
         this.handleRoleBasedNavigation();
     }
@@ -81,6 +82,59 @@ class DashboardNavigation {
         return filename;
     }
 
+    // Resolve the correct dashboard page for the current user's role + industry.
+    // Used to fix the "Dashboard" link on all shared pages (history, profile,
+    // settings, reports, integrations, admin-attendance) so every sector and
+    // role lands where it belongs.
+    getDashboardUrl() {
+        const role = String(this.currentUser.role || '').toLowerCase();
+        const industry = String(this.currentUser.industrytype || '').toLowerCase();
+
+        const isAdmin = role.includes('admin');
+
+        const adminDashboards = {
+            education: '/pages/admin-dashboard.html',
+            healthcare: '/pages/healthcare-admin-dashboard.html',
+            corporate: '/pages/corporate-admin-dashboard.html',
+            manufacturing: '/pages/manufacturing-admin-dashboard.html',
+            government: '/pages/government-admin-dashboard.html',
+            retail: '/pages/retail-admin-dashboard.html'
+        };
+
+        const userDashboards = {
+            education: '/pages/user-dashboard.html',
+            healthcare: '/pages/healthcare-user-dashboard.html',
+            corporate: '/pages/corporate-user-dashboard.html',
+            manufacturing: '/pages/manufacturing-user-dashboard.html',
+            government: '/pages/government-user-dashboard.html',
+            retail: '/pages/retail-user-dashboard.html'
+        };
+
+        if (isAdmin) {
+            return adminDashboards[industry] || '/pages/admin-dashboard.html';
+        }
+        // Education staff roles keep their dedicated dashboards
+        if (industry === 'education' && (role.includes('teacher') || role.includes('professor') || role.includes('faculty'))) {
+            return '/pages/teacher-dashboard.html';
+        }
+        return userDashboards[industry] || '/pages/user-dashboard.html';
+    }
+
+    // Rewrite every sidebar/dashboard link that points to the generic
+    // (education) dashboards so it targets the user's own industry dashboard.
+    fixDashboardLinks() {
+        const correct = this.getDashboardUrl();
+        const generics = ['/pages/admin-dashboard.html', '/pages/user-dashboard.html', 'admin-dashboard.html', 'user-dashboard.html'];
+        document.querySelectorAll('a[href]').forEach(link => {
+            const href = link.getAttribute('href');
+            if (!href) return;
+            if (generics.some(g => href.includes(g)) && href !== correct) {
+                console.log('Navigation: Rewriting dashboard link', href, '->', correct);
+                link.setAttribute('href', correct);
+            }
+        });
+    }
+
     setupNavigation() {
         // Fix all navigation links
         const navLinks = document.querySelectorAll('a[href]');
@@ -107,13 +161,12 @@ class DashboardNavigation {
 
     navigateTo(target) {
         if (target === 'dashboard') {
-            // Check if we have a stored industry-specific dashboard URL
-            const storedDashboardUrl = this.getStoredDashboardUrl();
-            if (storedDashboardUrl) {
-                console.log('Navigation: Using stored industry-specific dashboard:', storedDashboardUrl);
-                window.location.href = this.getCorrectPath(storedDashboardUrl);
-                return;
-            }
+            // The role + industry resolved dashboard is authoritative; a stale
+            // stored URL from another account/sector must never win.
+            const finalUrl = this.getDashboardUrl();
+            console.log('Navigation: dashboard ->', finalUrl);
+            window.location.href = this.getCorrectPath(finalUrl);
+            return;
         }
 
         const routes = {
@@ -200,12 +253,21 @@ class DashboardNavigation {
 
         // Show/hide admin-specific navigation
         const adminNavItems = document.querySelectorAll('.admin-only');
+        // Education-only pages must never appear for other sectors
+        const EDUCATION_ONLY_LINKS = ['faculty-classes', 'class-management', 'class-schedule', 'teacher-dashboard'];
         adminNavItems.forEach(item => {
             const isAdmin = userRole.includes('admin') ||
                            userRole === 'administrator' ||
                            userRole === 'system administrator' ||
                            userRole === 'super admin' ||
                            userRole === 'superadmin';
+            const link = item.querySelector('a[href]');
+            const href = (link ? link.getAttribute('href') : '').toLowerCase();
+            const isEducationOnly = EDUCATION_ONLY_LINKS.some(page => href.includes(page));
+            if (isEducationOnly && industryType !== 'education') {
+                item.style.display = 'none';
+                return;
+            }
             item.style.display = isAdmin ? 'block' : 'none';
         });
 

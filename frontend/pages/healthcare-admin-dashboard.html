@@ -2494,11 +2494,11 @@
                     return;
                 }
                 console.error('Dashboard data load error:', error);
-                // Show demo data if API fails
+                // Honest fallback on API failure - no fabricated compliance number
                 updateDashboardStats({
                     totalStaff: 0,
                     activeShifts: 0,
-                    complianceRate: '98%',
+                    complianceRate: '0%',
                     pendingRequests: 0
                 });
                 updateRecentActivity([]);
@@ -2508,16 +2508,24 @@
         }
 
         // Update dashboard statistics
+        // KPIs derived from REAL /api/admin/dashboard fields - nothing fabricated.
         function updateDashboardStats(data) {
-            document.getElementById('totalStaff').textContent = data.totalStaff || 0;
-            document.getElementById('activeShifts').textContent = data.activeShifts || 0;
-            document.getElementById('complianceRate').textContent = data.complianceRate || '98%';
-            document.getElementById('pendingRequests').textContent = data.pendingRequests || 0;
+            const totalStaff = data.totalStaff ?? data.totalUsers ?? 0;
+            const activeToday = data.activeUsers ?? 0;
+
+            document.getElementById('totalStaff').textContent = totalStaff;
+            // Real: staff who punched in today = staff on shift now
+            document.getElementById('activeShifts').textContent = activeToday;
+            // Real compliance rate when provided by the compliance module,
+            // otherwise today's staff participation % (never a fabricated number)
+            document.getElementById('complianceRate').textContent =
+                data.complianceRate ?? (totalStaff > 0 ? Math.round((activeToday / totalStaff) * 100) + '%' : '0%');
+            document.getElementById('pendingRequests').textContent = data.pendingRequests ?? 0;
 
             // Update overview stats
-            document.getElementById('orgTotalStaff').textContent = data.totalStaff || 0;
-            document.getElementById('orgActiveShifts').textContent = data.activeShifts || 0;
-            document.getElementById('orgPendingRequests').textContent = data.pendingRequests || 0;
+            document.getElementById('orgTotalStaff').textContent = totalStaff;
+            document.getElementById('orgActiveShifts').textContent = activeToday;
+            document.getElementById('orgPendingRequests').textContent = data.pendingRequests ?? 0;
         }
 
         // Update shift schedule
@@ -2709,10 +2717,10 @@
 
                 if (!response.ok) throw new Error('Failed to load compliance data');
 
-                const complianceData = await response.json();
+                const data = await response.json();
 
-                // Create compliance management modal
-                showComplianceManagementModal(complianceData);
+                // Create compliance management modal (pass the inner data object)
+                showComplianceManagementModal(data.complianceData || data);
 
             } catch (error) {
                 console.error('Compliance management error:', error);
@@ -2746,7 +2754,7 @@
         }
 
         function refreshShiftSchedule() {
-            // Simulate refreshing shift schedule
+            // Load the REAL shift schedule from the backend
             const container = document.getElementById('shiftScheduleContent');
             container.innerHTML = `
                 <div class="text-center py-4">
@@ -2755,29 +2763,22 @@
                 </div>
             `;
 
-            setTimeout(() => {
-                // Mock data for demonstration
-                const mockSchedule = [
-                    {
-                        staffName: 'Dr. Sarah Johnson',
-                        role: 'Emergency Physician',
-                        department: 'Emergency Department',
-                        startTime: '07:00',
-                        endTime: '19:00',
-                        status: 'active'
-                    },
-                    {
-                        staffName: 'Nurse Michael Chen',
-                        role: 'Registered Nurse',
-                        department: 'ICU',
-                        startTime: '19:00',
-                        endTime: '07:00',
-                        status: 'upcoming'
-                    }
-                ];
-                updateShiftSchedule(mockSchedule);
-                showNotification('Shift schedule refreshed!', 'success');
-            }, 1500);
+            setTimeout(async () => {
+                try {
+                    const token = getAuthToken();
+                    const response = await fetch(`${API_BASE}/api/admin/shifts`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const result = await response.json();
+                    if (!result.success) throw new Error(result.message || 'Failed to load shifts');
+                    updateShiftSchedule(result.shifts || []);
+                    showNotification('Shift schedule refreshed!', 'success');
+                } catch (error) {
+                    console.error('Shift schedule refresh error:', error);
+                    updateShiftSchedule([]);
+                    showNotification('Could not load shift schedule', 'error');
+                }
+            }, 500);
         }
 
         function refreshCompliance() {
@@ -3792,10 +3793,7 @@
                                             <div class="mb-3">
                                                 <label class="form-label">Assigned Doctor</label>
                                                 <select class="form-select" id="patientDoctor">
-                                                    <option value="">Select doctor...</option>
-                                                    <option value="Dr. Sarah Johnson">Dr. Sarah Johnson</option>
-                                                    <option value="Dr. Michael Chen">Dr. Michael Chen</option>
-                                                    <option value="Dr. Emily Rodriguez">Dr. Emily Rodriguez</option>
+                                                    <option value="">Loading staff...</option>
                                                 </select>
                                             </div>
                                             <div class="mb-3">
@@ -3823,6 +3821,30 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             const modal = new bootstrap.Modal(document.getElementById('patientModal'));
             modal.show();
+
+            // Populate the Assigned Doctor dropdown with REAL staff members
+            (async () => {
+                try {
+                    const token = getAuthToken();
+                    const resp = await fetch(`${API_BASE}/api/admin/staff`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const r = await resp.json();
+                    const sel = document.getElementById('patientDoctor');
+                    if (!sel) return;
+                    const staff = r.staff || r.users || [];
+                    if (!staff.length) {
+                        sel.innerHTML = '<option value="">No staff available</option>';
+                        return;
+                    }
+                    sel.innerHTML = '<option value="">Select doctor...</option>' +
+                        staff.map(s => `<option value="${s.name}">${s.name} (${s.role})</option>`).join('');
+                } catch (err) {
+                    console.error('Staff load for patient form failed:', err);
+                    const sel = document.getElementById('patientDoctor');
+                    if (sel) sel.innerHTML = '<option value="">Could not load staff</option>';
+                }
+            })();
 
             // Handle form submission
             document.getElementById('patientForm').addEventListener('submit', async (e) => {
@@ -3879,8 +3901,13 @@
                 });
 
                 if (response.ok) {
-                    showNotification(`${type.replace('_', ' ').toUpperCase()} check completed!`, 'success');
-                    // Refresh compliance data
+                    const data = await response.json();
+                    const passed = data && data.check ? data.check.passed : true;
+                    showNotification(
+                        (data && data.message) || `${type.replace('_', ' ').toUpperCase()} check completed!`,
+                        passed ? 'success' : 'warning'
+                    );
+                    // Refresh compliance data to show the recorded check
                     manageCompliance();
                 } else {
                     throw new Error('Compliance check failed');

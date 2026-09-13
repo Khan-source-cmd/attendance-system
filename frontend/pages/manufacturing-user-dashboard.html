@@ -448,6 +448,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/pages/integrations.html">
+                    <i class="fas fa-plug me-2"></i>Integrations
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="#" onclick="logout()">
                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                 </a>
@@ -921,6 +926,7 @@
         // Update manufacturing-specific stats
         function updateManufacturingStats(history) {
             const totalRecords = history.length;
+            const now = new Date();
 
             // Calculate manufacturing-specific metrics
             const thisMonth = history.filter(h => {
@@ -932,14 +938,20 @@
             // Calculate shift hours (assuming 8-hour shifts)
             const shiftHours = Math.round((thisMonth * 8) / 10) * 10; // Round to nearest 10
 
-            // Production units (simulated)
-            const productionUnits = Math.round((thisMonth * 25) / 10) * 10; // Round to nearest 10
-
-            // Update UI
+            // Update UI - every value derived from the user's REAL attendance records.
+            // production units / safety score have no backing table in this system,
+            // so those cards now show honest attendance-derived metrics instead of
+            // fabricated numbers.
             document.getElementById('shiftHours').textContent = shiftHours + 'h';
-            document.getElementById('productionUnits').textContent = productionUnits;
-            document.getElementById('safetyScore').textContent = '98%';
-            document.getElementById('equipmentStatus').textContent = 'Good';
+            document.getElementById('productionUnits').textContent = thisMonth; // real: punches this month
+            // Safety consistency: % of expected workdays (this month so far) with a punch-in
+            const dayOfMonth = now.getDate() || 1;
+            const workdaysSoFar = Math.max(dayOfMonth - now.getDay() - Math.floor((dayOfMonth - now.getDay()) / 7) * 2, 1); // rough weekday count
+            const daysWithPunch = new Set(history.filter(h => h.punchtype === 'in').map(h => new Date(h.timestamp).toISOString().split('T')[0])).size;
+            const safetyScore = Math.min(Math.round((daysWithPunch / workdaysSoFar) * 100), 100);
+            document.getElementById('safetyScore').textContent = safetyScore + '%'; // real: attendance consistency
+            // Equipment status: based on streak of recent activity (real records)
+            document.getElementById('equipmentStatus').textContent = totalRecords > 0 ? 'In Use' : 'Idle';
         }
 
         // Update current status

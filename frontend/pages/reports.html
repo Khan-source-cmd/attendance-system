@@ -566,11 +566,12 @@
 
   <script src="/vendor/bootstrap.bundle.min.js"></script>
   <script src="/js/navigation-fix.js"></script>
+  <script src="/js/industry-theme.js"></script>
   <script>
     const API_BASE = 'http://localhost:4000';
     
-    const token = localStorage.getItem('token');
-    const digitalId = localStorage.getItem('digitalid') || localStorage.getItem('digital_id');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const digitalId = localStorage.getItem('digitalid') || localStorage.getItem('digital_id') || sessionStorage.getItem('digitalid');
 
     if (!token || !digitalId) {
       window.location.href = '/pages/register.html';
@@ -1603,7 +1604,7 @@ ${hoursTrend > 0.5 ? '⏰ Working hours are increasing.' :
           const inHours = inTime.getHours() + inTime.getMinutes() / 60;
           punchIn.push({
             x: inHours,
-            y: Math.random() * 0.8 + 0.1, // Random Y position for scatter
+            y: 0.5, // Fixed Y - the data is the real punch TIME (X axis), not a value
             date: date
           });
         }
@@ -1613,7 +1614,7 @@ ${hoursTrend > 0.5 ? '⏰ Working hours are increasing.' :
           const outHours = outTime.getHours() + outTime.getMinutes() / 60;
           punchOut.push({
             x: outHours,
-            y: Math.random() * 0.8 + 0.1, // Random Y position for scatter
+            y: 0.3, // Fixed Y below punch-in line
             date: date
           });
         }

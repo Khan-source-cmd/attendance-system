@@ -1747,7 +1747,7 @@
                 <div class="compliance-card high">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-number" id="complianceRate">96%</div>
+                            <div class="stat-number" id="complianceRate">0%</div>
                             <div class="stat-label">Compliance Rate</div>
                         </div>
                         <div class="stat-icon" style="background: var(--success-gradient);">
@@ -2458,11 +2458,11 @@
                     return;
                 }
                 console.error('Dashboard data load error:', error);
-                // Show demo data if API fails
+                // Honest fallback on API failure - no fabricated compliance number
                 updateGovernmentStats({
                     totalEmployees: 0,
                     activeDepartments: 0,
-                    complianceRate: '96%',
+                    complianceRate: '0%',
                     pendingAudits: 0
                 });
                 updateRecentActivity([]);
@@ -2473,16 +2473,21 @@
         }
 
         // Update government-specific stats
+        // KPIs derived from REAL /api/admin/dashboard fields - nothing fabricated.
         function updateGovernmentStats(data) {
-            document.getElementById('totalEmployees').textContent = data.totalEmployees || 0;
-            document.getElementById('activeDepartments').textContent = data.activeDepartments || 0;
-            document.getElementById('complianceRate').textContent = data.complianceRate || '96%';
-            document.getElementById('pendingAudits').textContent = data.pendingAudits || 0;
+            const totalEmployees = data.totalEmployees ?? data.totalUsers ?? 0;
+            const activeToday = data.activeUsers ?? 0;
+
+            document.getElementById('totalEmployees').textContent = totalEmployees;
+            document.getElementById('activeDepartments').textContent = data.activeDepartments ?? data.totalClasses ?? 0;
+            // Real compliance proxy: % of staff present today
+            document.getElementById('complianceRate').textContent = (totalEmployees > 0 ? Math.round((activeToday / totalEmployees) * 100) : 0) + '%';
+            document.getElementById('pendingAudits').textContent = data.pendingAudits ?? data.pendingRequests ?? 0;
 
             // Update overview stats
-            document.getElementById('orgTotalEmployees').textContent = data.totalEmployees || 0;
-            document.getElementById('orgActiveDepartments').textContent = data.activeDepartments || 0;
-            document.getElementById('orgPendingRequests').textContent = data.pendingAudits || 0;
+            document.getElementById('orgTotalEmployees').textContent = totalEmployees;
+            document.getElementById('orgActiveDepartments').textContent = data.activeDepartments ?? data.totalClasses ?? 0;
+            document.getElementById('orgPendingRequests').textContent = data.pendingAudits ?? data.pendingRequests ?? 0;
         }
 
         // Update recent activity
@@ -2661,65 +2666,20 @@
         }
 
         // Load public service data
+        // The attendance system does not track citizen service counters - show
+        // an honest notice instead of fabricated service statistics.
         function loadPublicServiceData() {
             const container = document.getElementById('publicServiceContent');
 
-            // Mock public service data for demonstration
-            const mockServices = [
-                {
-                    service: 'Citizen Services',
-                    todayCount: 145,
-                    avgWaitTime: '12 min',
-                    satisfaction: 94
-                },
-                {
-                    service: 'Permit Applications',
-                    todayCount: 67,
-                    avgWaitTime: '25 min',
-                    satisfaction: 87
-                },
-                {
-                    service: 'Information Desk',
-                    todayCount: 203,
-                    avgWaitTime: '8 min',
-                    satisfaction: 96
-                },
-                {
-                    service: 'Emergency Services',
-                    todayCount: 23,
-                    avgWaitTime: '3 min',
-                    satisfaction: 98
-                }
-            ];
-
-            const servicesHtml = mockServices.map(service => `
+            container.innerHTML = `
                 <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
-                                <h6 class="mb-1">${service.service}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-users me-1"></i>${service.todayCount} served today
-                                </small>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-2">
-                                    <small class="text-muted">Avg Wait Time: ${service.avgWaitTime}</small>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-${service.avgWaitTime.includes('3') || service.avgWaitTime.includes('8') ? 'success' : service.avgWaitTime.includes('12') ? 'warning' : 'danger'}" style="width: ${service.satisfaction}%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <div class="h5 mb-0">${service.satisfaction}%</div>
-                                <small class="text-muted">Satisfaction</small>
-                            </div>
-                        </div>
+                    <div class="card-body text-center text-muted">
+                        <i class="fas fa-landmark fa-2x mb-3"></i>
+                        <h6 class="mb-1">Citizen Service Counters Not Integrated</h6>
+                        <p class="mb-0">This attendance system tracks staff attendance only. Connect a citizen-service platform to display real counter statistics here.</p>
                     </div>
                 </div>
-            `).join('');
-
-            container.innerHTML = servicesHtml;
+            `;
         }
 
         // Load compliance data
@@ -2730,76 +2690,63 @@
         }
 
         // Load department data
-        function loadDepartmentData() {
+        // Real, attendance-derived department overview - no fabricated budgets.
+        async function loadDepartmentData() {
             const container = document.getElementById('departmentContent');
 
-            // Mock department data for demonstration
-            const mockDepartments = [
-                {
-                    name: 'Public Administration',
-                    employees: 45,
-                    status: 'Active',
-                    budget: '$2.3M',
-                    performance: 92
-                },
-                {
-                    name: 'Citizen Services',
-                    employees: 32,
-                    status: 'Active',
-                    budget: '$1.8M',
-                    performance: 96
-                },
-                {
-                    name: 'Regulatory Compliance',
-                    employees: 28,
-                    status: 'Active',
-                    budget: '$1.5M',
-                    performance: 89
-                },
-                {
-                    name: 'Emergency Services',
-                    employees: 67,
-                    status: 'Active',
-                    budget: '$4.2M',
-                    performance: 98
-                }
-            ];
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE}/api/admin/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Failed to load');
 
-            const departmentsHtml = mockDepartments.map(dept => `
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-3">
-                                <h6 class="mb-1">${dept.name}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-users me-1"></i>${dept.employees} employees
-                                </small>
-                            </div>
-                            <div class="col-md-3">
-                                <span class="badge bg-${dept.status === 'Active' ? 'success' : 'warning'}">${dept.status}</span>
-                                <div class="mt-1">
-                                    <small class="text-muted">Budget: ${dept.budget}</small>
+                const d = result.data;
+                const total = d.totalUsers ?? 0;
+                const activeToday = d.activeUsers ?? 0;
+                const pending = d.pendingRequests ?? 0;
+
+                const rows = [
+                    { name: 'Total Employees', value: `${total} staff`, detail: 'Active members of this organization', pct: 100, status: 'primary' },
+                    { name: 'On Duty Today', value: `${activeToday} present`, detail: 'Staff who punched in today', pct: total > 0 ? Math.round((activeToday / total) * 100) : 0, status: activeToday > 0 ? 'success' : 'warning' },
+                    { name: 'Pending Punch Requests', value: `${pending} awaiting review`, detail: 'Manual punch approvals needed', pct: Math.min(100, pending * 10), status: pending > 0 ? 'warning' : 'success' }
+                ];
+
+                container.innerHTML = rows.map(dept => `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <h6 class="mb-1">${dept.name}</h6>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-2">
-                                    <small class="text-muted">Performance: ${dept.performance}%</small>
+                                <div class="col-md-3">
+                                    <div class="h5 mb-1">${dept.value}</div>
+                                    <small class="text-muted">${dept.detail}</small>
+                                </div>
+                                <div class="col-md-4">
                                     <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-${dept.performance >= 95 ? 'success' : dept.performance >= 90 ? 'warning' : 'danger'}" style="width: ${dept.performance}%"></div>
+                                        <div class="progress-bar bg-${dept.status}" style="width: ${dept.pct}%"></div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3 text-end">
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewDepartmentDetails('${dept.name}')">
-                                    <i class="fas fa-eye me-1"></i>Details
-                                </button>
+                                <div class="col-md-2 text-end">
+                                    <span class="badge bg-${dept.status}">${dept.pct}%</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
-
-            container.innerHTML = departmentsHtml;
+                `).join('');
+            } catch (error) {
+                console.error('Department data load error:', error);
+                container.innerHTML = `
+                    <div class="card mb-3">
+                        <div class="card-body text-center text-muted">
+                            <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                            <p class="mb-0">Could not load department data</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         // Update current time
@@ -3409,14 +3356,10 @@
                     console.error('Employee API request failed:', response.status, response.statusText);
                 }
 
-                // Fallback demo data
-                console.log('Using fallback demo data for employees');
-                select.innerHTML = `
-                    <option value="">Choose employee...</option>
-                    <option value="1">John Smith (john@gov.org)</option>
-                    <option value="2">Sarah Johnson (sarah@gov.org)</option>
-                    <option value="3">Mike Chen (mike@gov.org)</option>
-                `;
+                // Fallback: no fabricated employees. Show honest state so the
+                // admin knows to retry instead of QR-generating a fake person.
+                console.warn('Could not load real employees for QR generation');
+                select.innerHTML = '<option value="">No employees loaded - please reopen this modal</option>';
 
             } catch (error) {
                 console.error('Error loading employees:', error);
@@ -3503,45 +3446,8 @@
                     }
                 }
 
-                // Fallback for demo - generate a complex manual code
-                const timestamp = Date.now();
-                const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-                const base36Timestamp = timestamp.toString(36).toUpperCase();
-                const complexCode = `GOV-${employeeId}-${base36Timestamp}-${randomPart}`;
-
-                document.getElementById('qrPreview').classList.remove('d-none');
-                if (typeof QRCode !== 'undefined') {
-                    const container = document.getElementById('qrCodeContainer');
-                    container.innerHTML = '';
-                    new QRCode(container, {
-                        text: attendanceCode,
-                        width: parseInt(size),
-                        height: parseInt(size)
-                    });
-                }
-
-                // Display manual code for backup
-                const manualCodeDisplay = document.getElementById('manualCodeDisplay');
-                const manualCodeSection = document.getElementById('manualCodeSection');
-                const copyManualCodeBtn = document.getElementById('copyManualCodeBtn');
-
-                if (manualCodeDisplay && result.qr_code.code) {
-                    manualCodeDisplay.textContent = result.qr_code.code;
-                    console.log('✅ Manual code set to:', manualCodeDisplay.textContent);
-                }
-
-                // Show the manual code section
-                if (manualCodeSection) {
-                    manualCodeSection.classList.remove('d-none');
-                }
-
-                // Enable the copy button
-                if (copyManualCodeBtn) {
-                    copyManualCodeBtn.disabled = false;
-                }
-
-                showNotification('QR code generated successfully!', 'success');
-
+                // API call failed - show error
+                showNotification('Failed to generate QR code. Please try again.', 'error');
             } catch (error) {
                 console.error('Error generating QR code:', error);
                 showNotification('Error generating QR code', 'error');
@@ -3659,22 +3565,15 @@
                     }
                 }
 
-                // Fallback demo data
-                const demoCodes = [
-                    { id: '1', employeeName: 'John Smith', employeeId: 'EMP001', active: true, createdAt: new Date().toLocaleDateString(), lastUsed: '2 hours ago' },
-                    { id: '2', employeeName: 'Sarah Johnson', employeeId: 'EMP002', active: true, createdAt: new Date().toLocaleDateString(), lastUsed: 'Never' },
-                    { id: '3', employeeName: 'Mike Chen', employeeId: 'EMP003', active: false, createdAt: new Date().toLocaleDateString(), lastUsed: '1 day ago' }
-                ];
-                displayEmployeeQRCodes(demoCodes);
-                updateQRCodeStats(demoCodes);
+                // Real API failed - honest empty state, never fake QR codes
+                console.error('QR code list unavailable');
+                displayEmployeeQRCodes([]);
+                updateQRCodeStats([]);
 
             } catch (error) {
                 console.error('Error loading QR codes:', error);
-                const demoCodes = [
-                    { id: '1', employeeName: 'John Smith', employeeId: 'EMP001', active: true, createdAt: new Date().toLocaleDateString(), lastUsed: '2 hours ago' }
-                ];
-                displayEmployeeQRCodes(demoCodes);
-                updateQRCodeStats(demoCodes);
+                displayEmployeeQRCodes([]);
+                updateQRCodeStats([]);
             }
         }
 
@@ -3762,9 +3661,9 @@
                         return;
                     }
 
-                    // Fallback for demo
-                    showNotification('QR code deactivated successfully (demo mode)!', 'success');
-                    loadActiveEmployeeQRCodes();
+                    // Honest error — no fake success
+                    const err = await response.json().catch(() => ({}));
+                    showNotification(`Failed to deactivate QR code: ${err.message || 'Server error ' + response.status}`, 'error');
 
                 } catch (error) {
                     console.error('Error deactivating QR code:', error);
@@ -3840,40 +3739,13 @@
                     }
                 }
 
-                // Fallback demo data
-                const demoPunches = [
-                    {
-                        id: '1',
-                        employeeName: 'John Smith',
-                        employeeId: 'EMP001',
-                        punchType: 'in',
-                        requestedTime: new Date(Date.now() - 30 * 60 * 1000),
-                        reason: 'Arrived late due to traffic'
-                    },
-                    {
-                        id: '2',
-                        employeeName: 'Sarah Johnson',
-                        employeeId: 'EMP002',
-                        punchType: 'out',
-                        requestedTime: new Date(Date.now() - 15 * 60 * 1000),
-                        reason: 'Left early for medical appointment'
-                    }
-                ];
-                displayPendingEmployeePunchApprovals(demoPunches);
+                // Real API failed - honest empty state, never fake approvals
+                console.error('Pending approvals unavailable');
+                displayPendingEmployeePunchApprovals([]);
 
             } catch (error) {
                 console.error('Error loading pending approvals:', error);
-                const demoPunches = [
-                    {
-                        id: '1',
-                        employeeName: 'John Smith',
-                        employeeId: 'EMP001',
-                        punchType: 'in',
-                        requestedTime: new Date(Date.now() - 30 * 60 * 1000),
-                        reason: 'Arrived late due to traffic'
-                    }
-                ];
-                displayPendingEmployeePunchApprovals(demoPunches);
+                displayPendingEmployeePunchApprovals([]);
             }
         }
 
@@ -3936,9 +3808,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('Punch approved successfully (demo mode)!', 'success');
-                loadPendingEmployeePunchApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to approve punch: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error approving punch:', error);
@@ -3967,9 +3839,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('Punch rejected (demo mode)', 'warning');
-                loadPendingEmployeePunchApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to reject punch: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error rejecting punch:', error);
@@ -3993,9 +3865,9 @@
                     return;
                 }
 
-                // Fallback for demo
-                showNotification('All pending punches approved (demo mode)!', 'success');
-                loadPendingEmployeePunchApprovals();
+                // Honest error — no fake success
+                const err = await response.json().catch(() => ({}));
+                showNotification(`Failed to approve all punches: ${err.message || 'Server error ' + response.status}`, 'error');
 
             } catch (error) {
                 console.error('Error approving all punches:', error);

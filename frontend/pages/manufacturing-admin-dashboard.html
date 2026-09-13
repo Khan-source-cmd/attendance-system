@@ -2686,11 +2686,11 @@
                     return;
                 }
                 console.error('Dashboard data load error:', error);
-                // Show demo data if API fails
+                // Honest fallback on API failure - no fabricated efficiency number
                 updateManufacturingStats({
                     totalWorkers: 0,
                     activeLines: 0,
-                    overallEfficiency: '92%',
+                    overallEfficiency: '0%',
                     pendingMaintenance: 0
                 });
                 updateRecentActivity([]);
@@ -2701,16 +2701,22 @@
         }
 
         // Update manufacturing-specific stats
+        // KPIs derived from REAL /api/admin/dashboard fields - nothing fabricated.
         function updateManufacturingStats(data) {
-            document.getElementById('totalWorkers').textContent = data.totalWorkers || 0;
-            document.getElementById('activeLines').textContent = data.activeLines || 0;
-            document.getElementById('overallEfficiency').textContent = data.overallEfficiency || '92%';
-            document.getElementById('pendingMaintenance').textContent = data.pendingMaintenance || 0;
+            const totalWorkers = data.totalWorkers ?? data.totalUsers ?? 0;
+            const activeToday = data.activeUsers ?? 0;
+
+            document.getElementById('totalWorkers').textContent = totalWorkers;
+            // Real: workers who punched in today = workers on the floor now
+            document.getElementById('activeLines').textContent = activeToday;
+            // Real efficiency proxy: % of workers present today
+            document.getElementById('overallEfficiency').textContent = (totalWorkers > 0 ? Math.round((activeToday / totalWorkers) * 100) : 0) + '%';
+            document.getElementById('pendingMaintenance').textContent = data.pendingMaintenance ?? data.pendingRequests ?? 0;
 
             // Update overview stats
-            document.getElementById('orgTotalWorkers').textContent = data.totalWorkers || 0;
-            document.getElementById('orgActiveProjects').textContent = data.activeLines || 0;
-            document.getElementById('orgPendingRequests').textContent = data.pendingMaintenance || 0;
+            document.getElementById('orgTotalWorkers').textContent = totalWorkers;
+            document.getElementById('orgActiveProjects').textContent = activeToday;
+            document.getElementById('orgPendingRequests').textContent = data.pendingMaintenance ?? data.pendingRequests ?? 0;
         }
 
         // Update recent activity

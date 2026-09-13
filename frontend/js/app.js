@@ -269,7 +269,18 @@ class ApiClient {
                 }
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    // Try to extract error message from response body
+                    let errorData = null;
+                    try {
+                        errorData = await response.json();
+                    } catch (jsonError) {
+                        errorData = null;
+                    }
+                    // Use backend's error message if available
+                    const errorMessage = errorData && errorData.message 
+                        ? errorData.message 
+                        : `HTTP ${response.status}: ${response.statusText}`;
+                    throw new Error(errorMessage);
                 }
 
                 return await response.json();

@@ -383,15 +383,16 @@
     <!-- Scripts -->
     <script src="/vendor/bootstrap.bundle.min.js"></script>
     <script src="/js/navigation-fix.js"></script>
+    <script src="/js/industry-theme.js"></script>
     <script>
         // More flexible API base that handles both localhost and 127.0.0.1
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:4000' : `http://${window.location.hostname}:4000`;
 
         // Get auth tokens
-        const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
-        const digitalId = localStorage.getItem('digitalid') || localStorage.getItem('digital_id');
-        const userRole = localStorage.getItem('role');
-        const userIndustry = localStorage.getItem('industrytype');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('auth_token');
+        const digitalId = localStorage.getItem('digitalid') || localStorage.getItem('digital_id') || sessionStorage.getItem('digitalid');
+        const userRole = localStorage.getItem('role') || sessionStorage.getItem('role');
+        const userIndustry = localStorage.getItem('industrytype') || sessionStorage.getItem('industrytype');
 
         let currentUser = null;
         let organizationData = null;
@@ -636,8 +637,9 @@
             try {
                 console.log('Loading team members for user:', digitalId, 'Role:', userRole);
 
-                // Only admins can see all users, others see limited data
-                const endpoint = isAdminOrManager() ? '/api/admin/users' : '/api/profile';
+                // Only admins can see all users via admin API; regular users get
+                // the real org member directory from the non-sensitive members API
+                const endpoint = isAdminOrManager() ? '/api/admin/users' : '/api/organization/members';
 
                 const response = await fetch(`${API_BASE}${endpoint}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -665,43 +667,20 @@
                         }));
                         console.log('Admin view - All non-student users:', teamMembers.length);
                     } else {
-                        // Regular users only see staff/faculty, not students
-                        teamMembers = [{
-                            id: result.user.digital_id,
-                            name: result.user.name,
-                            role: result.user.role,
-                            department: getDepartmentForRole(result.user.role),
-                            status: 'online',
-                            lastActive: 'Now',
+                        // Regular users see every active member of their organization
+                        teamMembers = (result.members || []).map(user => ({
+                            id: user.digital_id,
+                            name: user.name,
+                            role: user.role,
+                            department: getDepartmentForRole(user.role),
+                            status: user.is_active ? 'online' : 'offline',
+                            lastActive: user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never',
                             avatar: null,
-                            isCurrentUser: true,
-                            email: result.user.email,
-                            industry_type: result.user.industry_type
-                        }];
-
-                        // Add some staff/faculty members for non-students
-                        const staffRoles = ['teacher', 'professor', 'admin', 'administrator', 'manager', 'principal'];
-                        const staffUsers = result.users?.filter(user =>
-                            staffRoles.some(role => user.role?.toLowerCase().includes(role)) &&
-                            user.digital_id !== digitalId
-                        ).slice(0, 5) || [];
-
-                        console.log('Staff users found:', staffUsers.length);
-
-                        staffUsers.forEach(user => {
-                            teamMembers.push({
-                                id: user.digital_id,
-                                name: user.name,
-                                role: user.role,
-                                department: getDepartmentForRole(user.role),
-                                status: user.is_active ? 'online' : 'offline',
-                                lastActive: user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never',
-                                avatar: null,
-                                isCurrentUser: false,
-                                email: user.email,
-                                industry_type: user.industry_type
-                            });
-                        });
+                            isCurrentUser: user.digital_id === digitalId,
+                            email: user.email,
+                            industry_type: user.industry_type
+                        }));
+                        console.log('Member view - Org directory:', teamMembers.length);
                     }
 
                     console.log('Final team members:', teamMembers);
@@ -731,59 +710,8 @@
             }
         }
 
-        // Generate mock team members
-        function generateMockTeamMembers() {
-            const members = [];
-            const roles = getRolesForIndustry();
-            const departments = organizationData.departments;
-
-            // Add current user first
-            members.push({
-                id: digitalId,
-                name: currentUser?.name || 'You',
-                role: userRole || 'employee',
-                department: getDepartmentForRole(userRole),
-                status: 'online',
-                lastActive: 'Now',
-                avatar: null,
-                isCurrentUser: true
-            });
-
-            // Generate other team members based on user's access level
-            const memberCount = isAdminOrManager() ? 15 : 8;
-
-            for (let i = 0; i < memberCount; i++) {
-                const role = roles[Math.floor(Math.random() * roles.length)];
-                const department = departments[Math.floor(Math.random() * departments.length)];
-                const firstName = ['John', 'Sarah', 'Michael', 'Emma', 'David', 'Lisa', 'Robert', 'Anna'][Math.floor(Math.random() * 8)];
-                const lastName = ['Smith', 'Johnson', 'Brown', 'Williams', 'Jones', 'Garcia', 'Miller', 'Davis'][Math.floor(Math.random() * 8)];
-
-                members.push({
-                    id: `EMP-${String(1000 + i).padStart(3, '0')}`,
-                    name: `${firstName} ${lastName}`,
-                    role: role,
-                    department: department,
-                    status: Math.random() > 0.3 ? 'online' : 'offline',
-                    lastActive: Math.random() > 0.5 ? 'Now' : `${Math.floor(Math.random() * 60)}m ago`,
-                    avatar: null,
-                    isCurrentUser: false
-                });
-            }
-
-            return members;
-        }
-
-        // Get appropriate roles for the industry
-        function getRolesForIndustry() {
-            const industryRoles = {
-                'education': ['teacher', 'principal', 'vice-principal', 'counselor', 'librarian', 'admin-staff', 'student'],
-                'corporate': ['manager', 'developer', 'analyst', 'sales-rep', 'hr-specialist', 'accountant'],
-                'healthcare': ['doctor', 'nurse', 'administrator', 'technician', 'pharmacist', 'receptionist'],
-                'retail': ['store-manager', 'sales-associate', 'cashier', 'stock-clerk', 'security-guard']
-            };
-
-            return industryRoles[userIndustry] || industryRoles['education'];
-        }
+        // Mock team member generator REMOVED - it invented fake colleagues
+        // with random names. The fallback now shows only the real current user.
 
         // Get department for a role
         function getDepartmentForRole(role) {
@@ -1142,9 +1070,9 @@
 
                     // Update the stats display with real data
                     document.getElementById('totalMembers').textContent = stats.totalUsers || organizationData.user_count || 0;
-                    document.getElementById('activeToday').textContent = stats.recentLogins || 0;
+                    document.getElementById('activeToday').textContent = stats.activeToday ?? stats.recentLogins ?? 0;
                     document.getElementById('departments').textContent = organizationData.departmentsCount || 0;
-                    document.getElementById('attendanceRate').textContent = '85%'; // Default attendance rate
+                    document.getElementById('attendanceRate').textContent = (stats.attendanceRate ?? 0) + '%';
 
                     console.log('✅ Organization stats loaded successfully');
                 } else {
@@ -1153,7 +1081,7 @@
                     document.getElementById('totalMembers').textContent = organizationData.user_count || 0;
                     document.getElementById('activeToday').textContent = 0;
                     document.getElementById('departments').textContent = organizationData.departmentsCount || 0;
-                    document.getElementById('attendanceRate').textContent = '85%';
+                    document.getElementById('attendanceRate').textContent = '0%';
                 }
             } catch (error) {
                 console.error('Error loading organization stats:', error);
@@ -1161,7 +1089,7 @@
                 document.getElementById('totalMembers').textContent = organizationData.user_count || 0;
                 document.getElementById('activeToday').textContent = 0;
                 document.getElementById('departments').textContent = organizationData.departmentsCount || 0;
-                document.getElementById('attendanceRate').textContent = '85%';
+                document.getElementById('attendanceRate').textContent = '0%';
             }
         }
 
@@ -1169,11 +1097,9 @@
         function showFallbackTeamMembers() {
             console.log('Showing fallback team members');
 
-            // Generate some sample team members based on user role
-            const sampleMembers = [];
-
-            // Add current user
-            sampleMembers.push({
+            // API failed - do NOT fabricate fake colleagues. Show only the real
+            // current user so the header count and the list stay consistent.
+            const sampleMembers = [{
                 id: digitalId,
                 name: currentUser?.name || 'You',
                 role: userRole || 'employee',
@@ -1182,29 +1108,7 @@
                 lastActive: 'Now',
                 avatar: null,
                 isCurrentUser: true
-            });
-
-            // Add some sample team members
-            const sampleData = [
-                { name: 'John Smith', role: 'teacher', department: 'Teaching Staff' },
-                { name: 'Sarah Johnson', role: 'admin', department: 'Administration' },
-                { name: 'Mike Wilson', role: 'manager', department: 'Management' },
-                { name: 'Emma Davis', role: 'teacher', department: 'Teaching Staff' },
-                { name: 'Robert Brown', role: 'teacher', department: 'Teaching Staff' }
-            ];
-
-            sampleData.forEach((member, index) => {
-                sampleMembers.push({
-                    id: `SAMPLE-${index + 1}`,
-                    name: member.name,
-                    role: member.role,
-                    department: member.department,
-                    status: Math.random() > 0.3 ? 'online' : 'offline',
-                    lastActive: Math.random() > 0.5 ? 'Now' : `${Math.floor(Math.random() * 60)}m ago`,
-                    avatar: null,
-                    isCurrentUser: false
-                });
-            });
+            }];
 
             teamMembers = sampleMembers;
             filteredMembers = [...teamMembers];
@@ -1212,7 +1116,7 @@
             displayTeamMembers();
             displayDepartments();
 
-            showNotification('Using sample data - please check your connection', 'warning');
+            showNotification('Could not load your team from the server - showing only your profile', 'warning');
         }
 
         // Show notification

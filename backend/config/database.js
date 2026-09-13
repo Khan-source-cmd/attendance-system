@@ -213,6 +213,17 @@ db.serialize(() => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (organization_id) REFERENCES organizations (id)
     );
+    CREATE TABLE IF NOT EXISTS compliance_checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      check_type TEXT NOT NULL,
+      status TEXT DEFAULT 'pass',
+      result_pct INTEGER DEFAULT 0,
+      message TEXT,
+      staff TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations (id)
+    );
   `;
   sectorTables.split(';').filter(s => s.trim()).forEach(stmt => db.run(stmt));
 });
