@@ -1,7 +1,7 @@
 // Admin Dashboard JavaScript - Updated for sidebar navigation and enhanced functionality
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://localhost:4000'
-  : 'http://' + window.location.hostname + ':4000';
+  : ''; // Use relative path for production (same domain)
 
 // Enhanced authentication handling
 function getAuthToken() {

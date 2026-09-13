@@ -5,7 +5,7 @@
 
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://localhost:4000'
-  : 'http://' + window.location.hostname + ':4000';
+  : ''; // Use relative path for production (same domain)
 
 // Authentication handling
 function getAuthToken() {

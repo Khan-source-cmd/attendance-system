@@ -5,8 +5,10 @@
 
 // Application Configuration
 const AppConfig = {
-    // More flexible API base that handles both localhost and 127.0.0.1
-    API_BASE: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:4000' : `http://${window.location.hostname}:4000`,
+    // Use relative path for API when on same domain (production), localhost with port for dev
+    API_BASE: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+        ? 'http://localhost:4000' 
+        : '/',  // Use relative path for production (same domain)
     VERSION: '2.0.0',
     DEBUG: true,
     STORAGE_PREFIX: 'uas_',

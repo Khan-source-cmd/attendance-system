@@ -26,6 +26,9 @@
 
     // ---- 1. Inject theme CSS (high specificity + !important to beat hardcoded styles) ----
     const css = `
+        /* Body background - override hardcoded gradients */
+        body { background: linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%) !important; }
+
         /* Sidebar (vertical, admin-attendance style) */
         .sidebar { background: ${theme.dark} !important; }
         .sidebar .sidebar-brand,
@@ -34,19 +37,56 @@
         .sidebar .nav-link.active { background: ${theme.primary} !important; color: #fff !important; }
 
         /* Horizontal navbar (history/profile/settings/reports/integrations style) */
-        .navbar-custom { background: ${theme.dark} !important; }
+        .navbar-custom { background: rgba(255, 255, 255, 0.95) !important; }
         .navbar-custom .navbar-brand,
         .navbar-custom .nav-link { color: rgba(255,255,255,0.85) !important; }
         .navbar-custom .nav-link:hover,
         .navbar-custom .nav-link.active,
         .navbar-custom .dropdown-item:hover { background: ${theme.primary} !important; color: #fff !important; }
+        .navbar-custom .navbar-brand { color: ${theme.primary} !important; }
 
-        /* Page header + primary buttons + links */
-        .page-header, .welcome-card { background: ${theme.primary} !important; }
-        .btn-primary { background: ${theme.primary} !important; border-color: ${theme.primary} !important; }
+        /* Page header + welcome card - override hardcoded blue gradients */
+        .page-header,
+        .welcome-card,
+        .profile-header,
+        .card-header.bg-primary,
+        .modal-header {
+            background: linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%) !important;
+            color: white !important;
+            border-left: 4px solid ${theme.primary} !important;
+        }
+
+        /* Primary buttons + links */
+        .btn-primary { background: ${theme.primary} !important; border-color: ${theme.primary} !important; color: white !important; }
         .btn-primary:hover { background: ${theme.dark} !important; border-color: ${theme.dark} !important; }
         .text-primary { color: ${theme.primary} !important; }
-        a { color: ${theme.primary}; }
+        a { color: ${theme.primary} !important; }
+
+        /* Cards with sector-specific borders */
+        .history-card,
+        .settings-card,
+        .profile-card,
+        .org-card,
+        .member-card,
+        .metric-card,
+        .card {
+            border-left: 4px solid ${theme.primary} !important;
+        }
+
+        /* Badge colors */
+        .badge-primary { background: ${theme.primary} !important; }
+        .badge-success { background: ${theme.light} !important; color: #fff !important; }
+        .badge-danger { background: ${theme.dark} !important; }
+
+        /* Admin attendance modal */
+        .modal-content { border: 1px solid ${theme.primary} !important; }
+
+        /* Mobile menu toggle */
+        .mobile-menu-toggle {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 2px solid ${theme.primary} !important;
+            color: ${theme.primary} !important;
+        }
     `;
     const style = document.createElement('style');
     style.id = 'industry-theme-style';

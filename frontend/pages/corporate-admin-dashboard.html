@@ -2223,7 +2223,7 @@
     <script src="/vendor/bootstrap.bundle.min.js"></script>
     <script>
         // More flexible API base that handles both localhost and 127.0.0.1
-        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:4000' : `http://${window.location.hostname}:4000`;
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:4000' : '';
 
         // Authentication functions
         function getAuthToken() {
