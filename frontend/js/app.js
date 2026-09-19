@@ -8,7 +8,7 @@ const AppConfig = {
     // Use relative path for API when on same domain (production), localhost with port for dev
     API_BASE: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
         ? 'http://localhost:4000' 
-        : '/',  // Use relative path for production (same domain)
+        : '',  // Relative path in production (same origin)
     VERSION: '2.0.0',
     DEBUG: true,
     STORAGE_PREFIX: 'uas_',
