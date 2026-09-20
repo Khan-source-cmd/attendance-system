@@ -128,6 +128,53 @@ function checkRateLimit(key, limit = 5, windowMs = 60000) {
   });
 }
 
+/**
+ * Read-only rate-limit probe. Returns Promise<boolean> (true = already over the
+ * limit) WITHOUT recording a new hit. Pair with recordRateLimitHit() so that
+ * only failed attempts count toward the limit (successful logins stay free).
+ * Fail-open on storage errors.
+ */
+function peekRateLimit(key, limit = 5, windowMs = 60000) {
+  const windowStart = Date.now() - windowMs;
+
+  return new Promise((resolve) => {
+    db.get(
+      'SELECT COUNT(*) AS c FROM rate_limits WHERE rate_key = ? AND ts > ?',
+      [key, windowStart],
+      (err, row) => {
+        if (err) return resolve(false);
+        resolve(row.c >= limit);
+      }
+    );
+  });
+}
+
+/**
+ * Record a single hit for a key (use for failed attempts only). Fail-open.
+ */
+function recordRateLimitHit(key, windowMs = 60000) {
+  const now = Date.now();
+  const windowStart = now - windowMs;
+
+  return new Promise((resolve) => {
+    db.run('INSERT INTO rate_limits (rate_key, ts) VALUES (?, ?)', [key, now], (err) => {
+      if (err) return resolve(false);
+      // Opportunistically prune stale entries for this key.
+      db.run('DELETE FROM rate_limits WHERE rate_key = ? AND ts <= ?', [key, windowStart], () => {});
+      resolve(true);
+    });
+  });
+}
+
+/**
+ * Clear every hit for a key (e.g. after a successful login). Fail-open.
+ */
+function clearRateLimit(key) {
+  return new Promise((resolve) => {
+    db.run('DELETE FROM rate_limits WHERE rate_key = ?', [key], () => resolve(true));
+  });
+}
+
 /* --------------------------- Audit log ----------------------------------- */
 
 /**
@@ -154,5 +201,8 @@ module.exports = {
   markResetTokenUsed,
   deleteResetToken,
   checkRateLimit,
+  peekRateLimit,
+  recordRateLimitHit,
+  clearRateLimit,
   logAudit
 };

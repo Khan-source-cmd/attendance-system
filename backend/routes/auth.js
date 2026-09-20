@@ -30,6 +30,9 @@ const {
   markResetTokenUsed,
   deleteResetToken,
   checkRateLimit,
+  peekRateLimit,
+  recordRateLimitHit,
+  clearRateLimit,
   logAudit
 } = require('../utils/stores');
 
@@ -735,13 +738,16 @@ router.post('/login', async (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'] || 'Unknown';
     
-    // Rate limiting for login attempts
-    if (!(await checkRateLimit(`login_${clientIp}`, 10, 900000))) { // 10 attempts per 15 minutes
-      return res.status(429).json({ success: false, message: "Too many login attempts. Please wait 15 minutes." });
-    }
-    
     if (!digital_id || !password) {
       return res.status(400).json({ success: false, message: "Digital ID and password are required" });
+    }
+
+    // Rate limiting: 10 FAILED attempts per 15 minutes, tracked per IP + Digital ID.
+    // Keying on both prevents one retrying user from locking out everyone behind
+    // the same proxy, and successful logins never consume the budget.
+    const loginLimitKey = `login_${clientIp}_${String(digital_id).trim().toLowerCase()}`;
+    if (await peekRateLimit(loginLimitKey, 10, 900000)) {
+      return res.status(429).json({ success: false, message: "Too many failed login attempts. Please wait 15 minutes." });
     }
 
     const user = await new Promise((resolve, reject) => {
@@ -760,6 +766,7 @@ router.post('/login', async (req, res) => {
 
     if (!user) {
       console.log(` Login attempt with non-existent digital ID: ${digital_id}`);
+      await recordRateLimitHit(loginLimitKey);
       return res.status(404).json({ success: false, message: "Invalid credentials" });
     }
 
@@ -779,8 +786,12 @@ router.post('/login', async (req, res) => {
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       console.log(` Invalid password attempt for: ${digital_id}`);
+      await recordRateLimitHit(loginLimitKey);
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
+
+    // Successful login: clear the failed-attempt budget for this IP + Digital ID.
+    await clearRateLimit(loginLimitKey);
 
     // Generate comprehensive JWT token
     const tokenPayload = { 

@@ -15,6 +15,11 @@ const { check, validationResult } = require('express-validator');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Behind a hosting proxy (Render, Fly, nginx, ...) the real client IP arrives in
+// the X-Forwarded-For header. Without this, req.ip is the proxy's address, so
+// every user shares one rate-limit bucket and one user can lock out everyone.
+app.set('trust proxy', 1);
+
 // ---------------------------------------------------------------------------
 // Environment variables - MUST be provided via backend/.env (see .env.example).
 // No hard-coded secrets are allowed as fallbacks (security hardening).
@@ -78,7 +83,18 @@ app.use((req, res, next) => {
   );
   next();
 });
-app.use(express.static(path.join(__dirname, "../frontend")));
+// Static frontend.
+// HTML/JS/CSS are served with `no-cache` (revalidate via ETag) so a browser
+// never keeps running stale JavaScript after a new deploy.
+app.use(express.static(path.join(__dirname, "../frontend"), {
+  etag: true,
+  lastModified: true,
+  setHeaders(res, filePath) {
+    if (/\.(html?|js|css)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // Enhanced logging middleware
 app.use((req, res, next) => {
