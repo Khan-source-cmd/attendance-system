@@ -14,12 +14,6 @@
       min-height: 100vh;
     }
     
-    .navbar-custom {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-    
     .main-container {
       padding: 2rem 0;
     }
@@ -266,61 +260,6 @@
   </style>
 </head>
 <body>
-  <!-- Navigation -->
-  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
-    <div class="container">
-      <a class="navbar-brand" href="#" data-nav="dashboard">
-        <i class="fas fa-chart-bar me-2"></i>Reports
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="#" data-nav="dashboard">
-              <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/pages/history.html">
-              <i class="fas fa-history me-1"></i>History
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/pages/profile.html">
-              <i class="fas fa-user me-1"></i>Profile
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active" href="/pages/reports.html">
-              <i class="fas fa-chart-bar me-1"></i>Reports
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/pages/settings.html">
-              <i class="fas fa-cog me-1"></i>Settings
-            </a>
-          </li>
-          <li class="nav-item admin-only" style="display: none;">
-            <a class="nav-link" href="/pages/faculty-classes.html">
-              <i class="fas fa-chalkboard-teacher me-1"></i>Faculty Classes
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#" onclick="showIntegrationsPage()">
-              <i class="fas fa-plug me-1"></i>Integrations
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#" onclick="logout()">
-              <i class="fas fa-sign-out-alt me-1"></i>Logout
-            </a>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </nav>
 
   <!-- Main Content -->
   <div class="container main-container">
@@ -565,6 +504,7 @@
   </div>
 
   <script src="/vendor/bootstrap.bundle.min.js"></script>
+    <script src="/js/sidebar.js"></script>
   <script src="/js/navigation-fix.js"></script>
   <script src="/js/industry-theme.js"></script>
   <script>

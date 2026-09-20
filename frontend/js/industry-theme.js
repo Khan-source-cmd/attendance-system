@@ -56,6 +56,26 @@
             border-right: 4px solid ${theme.primary} !important;
         }
 
+        /* Shared app sidebar (sidebar.js component) - white surface, dark text,
+           sector colour for the brand icon and hover/active accents */
+        .app-sidebar { background: rgba(255, 255, 255, 0.97) !important; }
+        .app-sidebar .sidebar-brand { color: #2c3e50 !important; }
+        .app-sidebar .sidebar-brand i { color: ${theme.primary} !important; }
+        .app-sidebar .nav-link { color: #2c3e50 !important; }
+        .app-sidebar .nav-link:hover {
+            color: ${theme.primary} !important;
+            background: ${theme.soft} !important;
+        }
+        .app-sidebar .nav-link.active {
+            color: ${theme.primary} !important;
+            background: ${theme.soft} !important;
+            border-right: 4px solid ${theme.primary} !important;
+        }
+        .app-sidebar-toggle {
+            border-color: ${theme.primary} !important;
+            color: ${theme.primary} !important;
+        }
+
         /* Horizontal navbar (history/profile/settings/reports/integrations style).
            These pages ship a WHITE navbar, so its text must stay DARK. Forcing
            white text here produced white-on-white navigation. */
