@@ -1309,8 +1309,8 @@ app.use((err, req, res, next) => {
 // ---------------------------------------------------------------------------
 // Health / keep-alive endpoint.
 // A free uptime monitor (cron-job.org, UptimeRobot) or the GitHub Actions
-// workflow in .github/workflows/keep-alive.yml pings this every few minutes so
-// a Free Render instance never spins down after 15 minutes of idle traffic.
+// workflow documented in docs/github-actions-keep-alive.yml pings this every
+// few minutes so a Free Render instance never spins down after 15 min of idle.
 // Intentionally dependency-free and cheap: one trivial query, no auth.
 // ---------------------------------------------------------------------------
 app.get('/api/health', (req, res) => {
