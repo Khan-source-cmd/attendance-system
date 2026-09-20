@@ -13,14 +13,14 @@
         localStorage.getItem('industry') || sessionStorage.getItem('industry') || 'education'
     ).toLowerCase();
 
-    // Sector palettes: [primary, primary-dark, primary-light]
+    // Sector palettes: [primary, primary-dark, primary-light, soft tint]
     const THEMES = {
-        education:    { name: 'Education',    icon: 'fa-graduation-cap', primary: '#3498db', dark: '#2c3e50', light: '#5dade2' },
-        healthcare:   { name: 'Healthcare',   icon: 'fa-heartbeat',      primary: '#e74c3c', dark: '#78281f', light: '#ec7063' },
-        corporate:    { name: 'Corporate',    icon: 'fa-briefcase',      primary: '#2c3e50', dark: '#1a252f', light: '#566573' },
-        manufacturing:{ name: 'Manufacturing',icon: 'fa-industry',       primary: '#e67e22', dark: '#7e4300', light: '#f0a04b' },
-        government:   { name: 'Government',   icon: 'fa-landmark',       primary: '#8e44ad', dark: '#4a235a', light: '#af7ac5' },
-        retail:       { name: 'Retail',       icon: 'fa-shopping-cart',  primary: '#27ae60', dark: '#145a32', light: '#52be80' }
+        education:    { name: 'Education',    icon: 'fa-graduation-cap', primary: '#3498db', dark: '#2c3e50', light: '#5dade2', soft: 'rgba(52, 152, 219, 0.15)' },
+        healthcare:   { name: 'Healthcare',   icon: 'fa-heartbeat',      primary: '#e74c3c', dark: '#78281f', light: '#ec7063', soft: 'rgba(231, 76, 60, 0.15)' },
+        corporate:    { name: 'Corporate',    icon: 'fa-briefcase',      primary: '#2c3e50', dark: '#1a252f', light: '#566573', soft: 'rgba(44, 62, 80, 0.15)' },
+        manufacturing:{ name: 'Manufacturing',icon: 'fa-industry',       primary: '#e67e22', dark: '#7e4300', light: '#f0a04b', soft: 'rgba(230, 126, 34, 0.15)' },
+        government:   { name: 'Government',   icon: 'fa-landmark',       primary: '#8e44ad', dark: '#4a235a', light: '#af7ac5', soft: 'rgba(142, 68, 173, 0.15)' },
+        retail:       { name: 'Retail',       icon: 'fa-shopping-cart',  primary: '#27ae60', dark: '#145a32', light: '#52be80', soft: 'rgba(39, 174, 96, 0.15)' }
     };
     const theme = THEMES[industry] || THEMES.education;
 
@@ -29,21 +29,49 @@
         /* Body background - override hardcoded gradients */
         body { background: linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%) !important; }
 
-        /* Sidebar (vertical, admin-attendance style) */
-        .sidebar { background: ${theme.dark} !important; }
-        .sidebar .sidebar-brand,
-        .sidebar .nav-link { color: rgba(255,255,255,0.85) !important; }
-        .sidebar .nav-link:hover { background: ${theme.primary} !important; color: #fff !important; }
-        .sidebar .nav-link.active { background: ${theme.primary} !important; color: #fff !important; }
+        /* Sidebar - matches the look the dashboards already use: white surface,
+           dark text, sector colour for the brand icon and the active accent.
+           Forcing white text here was what made the brand invisible against the
+           page's own white .sidebar-header strip. */
+        .sidebar { background: rgba(255, 255, 255, 0.98) !important; }
 
-        /* Horizontal navbar (history/profile/settings/reports/integrations style) */
+        .sidebar .sidebar-header,
+        .sidebar-header {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .sidebar .sidebar-brand { color: #2c3e50 !important; }
+        .sidebar .sidebar-brand i { color: ${theme.primary} !important; }
+
+        .sidebar .nav-link { color: #2c3e50 !important; }
+        .sidebar .nav-link i { color: inherit !important; }
+        .sidebar .nav-link:hover {
+            color: ${theme.primary} !important;
+            background: ${theme.soft} !important;
+        }
+        .sidebar .nav-link.active {
+            color: ${theme.primary} !important;
+            background: ${theme.soft} !important;
+            border-right: 4px solid ${theme.primary} !important;
+        }
+
+        /* Horizontal navbar (history/profile/settings/reports/integrations style).
+           These pages ship a WHITE navbar, so its text must stay DARK. Forcing
+           white text here produced white-on-white navigation. */
         .navbar-custom { background: rgba(255, 255, 255, 0.95) !important; }
-        .navbar-custom .navbar-brand,
-        .navbar-custom .nav-link { color: rgba(255,255,255,0.85) !important; }
-        .navbar-custom .nav-link:hover,
-        .navbar-custom .nav-link.active,
-        .navbar-custom .dropdown-item:hover { background: ${theme.primary} !important; color: #fff !important; }
         .navbar-custom .navbar-brand { color: ${theme.primary} !important; }
+        .navbar-custom .navbar-brand i { color: ${theme.primary} !important; }
+        .navbar-custom .nav-link { color: ${theme.dark} !important; }
+        .navbar-custom .nav-link i { color: inherit !important; }
+        .navbar-custom .nav-link:hover,
+        .navbar-custom .nav-link.active { background: ${theme.primary} !important; color: #fff !important; }
+        .navbar-custom .dropdown-item { color: ${theme.dark} !important; }
+        .navbar-custom .dropdown-item:hover { background: ${theme.primary} !important; color: #fff !important; }
+        .navbar-custom .navbar-toggler {
+            border-color: ${theme.primary} !important;
+            color: ${theme.primary} !important;
+        }
 
         /* Page header + welcome card - override hardcoded blue gradients */
         .page-header,
