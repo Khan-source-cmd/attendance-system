@@ -1,0 +1,83 @@
+# =============================================================================
+# KEEP-ALIVE PINGER for the Render Free web service
+# =============================================================================
+#
+# WHY: Render spins a Free web service down after 15 minutes without traffic,
+# and a spun-down instance comes back with an EMPTY local filesystem (which
+# resets the SQLite database). Pinging a real route every few minutes keeps the
+# instance active so it never gets recycled while idle.
+#
+# HOW TO ENABLE (pick ONE):
+#
+#   Option A — GitHub Actions (free, no signup)
+#     GitHub only accepts workflow files under .github/workflows/, and pushing
+#     there requires a token with `workflow` scope. Easiest path: open this file
+#     on github.com, copy its contents, then create the file
+#     .github/workflows/keep-alive.yml in the GitHub web editor
+#     (Add file -> Create new file) and paste. Commit — done.
+#
+#   Option B — cron-job.org or UptimeRobot (recommended: tighter timing)
+#     Create a free account and add an HTTP monitor for:
+#         https://attendance-system-xti4.onrender.com/api/health
+#     Interval: every 5 minutes. Expect HTTP 200 with {"status":"ok"}.
+#
+# CAVEATS
+#   * GitHub's scheduler is best-effort and can run several minutes late; it is
+#     also disabled after 60 days of repository inactivity. A dedicated monitor
+#     (Option B) is more reliable.
+#   * Render special-cases /robots.txt while spun down, so always ping a real
+#     application route (/api/health), never /robots.txt.
+#   * Keeping one service always-on uses roughly 730 of the ~750 instance hours
+#     Render includes per workspace each month. Keep only this service awake.
+#   * This prevents sleep-related resets only. Deploys still wipe the ephemeral
+#     disk, and Render may restart a Free instance at any time.
+#
+# =============================================================================
+
+name: Keep Render service awake
+
+on:
+  schedule:
+    # Every 5 minutes. GitHub's scheduler is best-effort and may run late.
+    - cron: '*/5 * * * *'
+  # Lets you trigger a ping manually from the Actions tab.
+  workflow_dispatch:
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping /api/health
+        env:
+          HEALTH_URL: https://attendance-system-xti4.onrender.com/api/health
+        run: |
+          echo "Pinging $HEALTH_URL"
+
+          # A cold start can take up to ~60s, so allow a generous timeout and
+          # retry a couple of times before giving up.
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' \
+                   --max-time 90 "$HEALTH_URL" || echo "000")
+            echo "Attempt $attempt -> HTTP $code"
+
+            if [ "$code" = "200" ]; then
+              echo "Service is awake."
+              cat /tmp/health.json
+              echo
+              exit 0
+            fi
+
+            sleep 20
+          done
+
+          echo "Service did not answer 200. Last response:"
+          cat /tmp/health.json 2>/dev/null || true
+          # Do not fail the job: this runs ~288x/day and a red build would spam
+          # notifications. The log line above is enough to notice an outage.
+          exit 0

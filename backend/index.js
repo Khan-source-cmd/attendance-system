@@ -1306,6 +1306,25 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Health / keep-alive endpoint.
+// A free uptime monitor (cron-job.org, UptimeRobot) or the GitHub Actions
+// workflow in .github/workflows/keep-alive.yml pings this every few minutes so
+// a Free Render instance never spins down after 15 minutes of idle traffic.
+// Intentionally dependency-free and cheap: one trivial query, no auth.
+// ---------------------------------------------------------------------------
+app.get('/api/health', (req, res) => {
+  db.get('SELECT 1 AS ok', [], (err) => {
+    res.status(err ? 503 : 200).json({
+      success: !err,
+      status: err ? 'degraded' : 'ok',
+      database: err ? 'unavailable' : 'connected',
+      uptime_seconds: Math.round(process.uptime()),
+      timestamp: new Date().toISOString()
+    });
+  });
+});
+
 // Enhanced 404 handler
 app.use((req, res) => {
   console.log(` 404 - Endpoint not found: ${req.method} ${req.path} from ${req.ip}`);
