@@ -4,6 +4,17 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Local auth helpers (auth.js does not expose these globally) ---
+    function getToken() {
+        return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    }
+
+    function checkAuthentication() {
+        if (!getToken()) {
+            window.location.href = '/pages/register.html';
+        }
+    }
+
     // Check authentication
     checkAuthentication();
     
@@ -91,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load classes for the current teacher
     async function loadClasses() {
         try {
-            const response = await fetch('/api/teacher/classes', {
+            const response = await fetch('/api/faculty/teacher/class-options', {
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
                 }
@@ -109,7 +120,9 @@ document.addEventListener('DOMContentLoaded', function() {
             allClasses.forEach(cls => {
                 const option = document.createElement('option');
                 option.value = cls.id;
-                option.textContent = `${cls.class_name} - ${cls.subject}`;
+                option.textContent = cls.subject
+                    ? `${cls.class_name} - ${cls.subject}`
+                    : cls.class_name;
                 classSelectEl.appendChild(option);
             });
             
@@ -124,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             loadingSchedulesEl.classList.remove('d-none');
             
-            const response = await fetch(`/api/schedule/teacher`, {
+            const response = await fetch(`/api/faculty/teacher/schedules`, {
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
                 }
@@ -458,11 +471,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (currentScheduleId) {
                 // Update existing schedule
-                url = `/api/schedule/${currentScheduleId}`;
+                url = `/api/faculty/teacher/schedules/${currentScheduleId}`;
                 method = 'PUT';
             } else {
                 // Create new schedule
-                url = '/api/schedule';
+                url = '/api/faculty/teacher/schedules';
                 method = 'POST';
             }
             
@@ -532,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmDeleteBtn.disabled = true;
             confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Deleting...';
             
-            const response = await fetch(`/api/schedule/${currentScheduleId}`, {
+            const response = await fetch(`/api/faculty/teacher/schedules/${currentScheduleId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`

@@ -246,8 +246,10 @@
             if (admin) {
                 links.push(L('/pages/class-management.html', 'fa-chalkboard', 'Class Management', 'class-management.html'));
                 links.push(L('/pages/faculty-classes.html', 'fa-chalkboard-teacher', 'Faculty Classes', 'faculty-classes.html'));
+                links.push(L('/pages/class-schedule.html', 'fa-calendar-week', 'Class Schedule', 'class-schedule.html'));
             } else if (isTeacher) {
                 links.push(L('/pages/teacher-dashboard.html', 'fa-graduation-cap', 'Teacher Portal', 'teacher-dashboard.html'));
+                links.push(L('/pages/class-schedule.html', 'fa-calendar-week', 'Class Schedule', 'class-schedule.html'));
             }
         }
 

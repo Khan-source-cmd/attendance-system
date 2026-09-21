@@ -8,6 +8,7 @@ const router = express.Router();
 const facultyController = require('../controllers/facultyController');
 const { check } = require('express-validator');
 const { authenticateToken, requireEducationOrg, requireTeacher } = require('../middleware/auth');
+const ClassSchedule = require('../models/ClassSchedule');
 
 // Enhanced teacher middleware (allows both teachers and admins)
 function requireTeacherMiddleware(req, res, next) {
@@ -1204,5 +1205,208 @@ router.get('/:facultyId/statistics',
   requireEducationOrg,
   facultyController.getFacultyStatistics
 );
+
+// ========== CLASS SCHEDULE ROUTES (weekly recurring schedule per teacher) ==========
+// Backs frontend/pages/class-schedule.html. Uses the class_schedules table via
+// the ClassSchedule model. Gated by requireTeacherMiddleware (education-only,
+// teachers or admins) and ownership checks (a teacher only touches own rows).
+
+const SCHEDULE_ADMIN_ROLES = ['admin', 'administrator', 'system administrator', 'super admin'];
+const TIME_FORMAT_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+
+function isScheduleAdmin(user) {
+  return SCHEDULE_ADMIN_ROLES.some((r) => String(user.role || '').toLowerCase().includes(r));
+}
+
+// Classes the current teacher teaches -> dropdown source for the schedule form
+router.get('/teacher/class-options', authenticateToken, requireTeacherMiddleware, (req, res) => {
+  const teacherId = req.user.digital_id;
+  const organizationId = req.user.organization_id;
+
+  req.db.all(`
+    SELECT DISTINCT c.id, c.class_name, s.subject_name AS subject
+    FROM classes c
+    JOIN class_subjects cs ON c.id = cs.class_id AND cs.teacher_id = ? AND cs.is_active = 1
+    LEFT JOIN subjects s ON cs.subject_id = s.id
+    WHERE c.organization_id = ? AND c.is_active = 1
+    ORDER BY c.class_name
+  `, [teacherId, organizationId], (err, classes) => {
+    if (err) {
+      console.error(" Class options fetch error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch classes" });
+    }
+    res.json({ success: true, classes });
+  });
+});
+
+// All schedules for the current teacher
+router.get('/teacher/schedules', authenticateToken, requireTeacherMiddleware, async (req, res) => {
+  try {
+    const schedules = await ClassSchedule.findByTeacherId(req.user.digital_id, { active: true });
+    res.json({ success: true, schedules });
+  } catch (err) {
+    console.error(" Schedules fetch error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch schedules" });
+  }
+});
+
+// Create a schedule; overlapping own schedule -> 409 { conflicts: [...] }
+router.post('/teacher/schedules', authenticateToken, requireTeacherMiddleware, async (req, res) => {
+  try {
+    const { class_id, day_of_week, start_time, end_time,
+            room_number = null, recurring = 1, start_date, end_date = null, notes = null } = req.body;
+
+    if (class_id === undefined || class_id === '' || day_of_week === undefined ||
+        !start_time || !end_time || !start_date) {
+      return res.status(400).json({ success: false, message: "class_id, day_of_week, start_time, end_time and start_date are required" });
+    }
+    const day = parseInt(day_of_week, 10);
+    if (isNaN(day) || day < 0 || day > 6) {
+      return res.status(400).json({ success: false, message: "day_of_week must be between 0 (Sunday) and 6 (Saturday)" });
+    }
+    if (!TIME_FORMAT_RE.test(start_time) || !TIME_FORMAT_RE.test(end_time)) {
+      return res.status(400).json({ success: false, message: "start_time and end_time must be valid HH:MM values" });
+    }
+    if (start_time >= end_time) {
+      return res.status(400).json({ success: false, message: "start_time must be earlier than end_time" });
+    }
+
+    // The class must be one the teacher actually teaches, in their organization
+    req.db.get(`
+      SELECT c.id FROM classes c
+      JOIN class_subjects cs ON c.id = cs.class_id AND cs.teacher_id = ? AND cs.is_active = 1
+      WHERE c.id = ? AND c.organization_id = ? AND c.is_active = 1
+    `, [req.user.digital_id, class_id, req.user.organization_id], async (err, own) => {
+      if (err) {
+        console.error(" Schedule class check error:", err);
+        return res.status(500).json({ success: false, message: "Failed to verify class" });
+      }
+      if (!own) {
+        return res.status(403).json({ success: false, message: "You can only schedule classes you teach" });
+      }
+      try {
+        const conflicts = await ClassSchedule.checkConflicts(req.user.digital_id, start_time, end_time, day);
+        if (conflicts && conflicts.length > 0) {
+          return res.status(409).json({ success: false, message: "Schedule conflict detected", conflicts });
+        }
+        const created = await ClassSchedule.create({
+          class_id, teacher_id: req.user.digital_id, day_of_week: day,
+          start_time, end_time, room_number,
+          recurring: parseInt(recurring, 10) === 0 ? 0 : 1,
+          start_date, end_date, is_active: 1, notes
+        });
+        res.status(201).json({ success: true, message: "Schedule created successfully", schedule: created });
+      } catch (createErr) {
+        console.error(" Schedule create error:", createErr);
+        res.status(500).json({ success: false, message: "Failed to create schedule" });
+      }
+    });
+  } catch (err) {
+    console.error(" Schedule create error:", err);
+    res.status(500).json({ success: false, message: "Failed to create schedule" });
+  }
+});
+
+// Update a schedule (owner teacher or education admin); conflict-aware
+router.put('/teacher/schedules/:id', authenticateToken, requireTeacherMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: "Invalid schedule id" });
+    }
+    const existing = await ClassSchedule.findById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Schedule not found" });
+    }
+    if (!isScheduleAdmin(req.user) && existing.teacher_id !== req.user.digital_id) {
+      return res.status(403).json({ success: false, message: "You can only edit your own schedules" });
+    }
+
+    const { class_id, day_of_week, start_time, end_time,
+            room_number, recurring, start_date, end_date, notes, is_active } = req.body;
+    const updates = {};
+    if (class_id !== undefined && class_id !== '') updates.class_id = class_id;
+    if (start_date !== undefined && start_date !== '') updates.start_date = start_date;
+    if (end_date !== undefined) updates.end_date = end_date;
+    if (room_number !== undefined) updates.room_number = room_number;
+    if (notes !== undefined) updates.notes = notes;
+    if (is_active !== undefined) updates.is_active = is_active ? 1 : 0;
+    if (recurring !== undefined) updates.recurring = parseInt(recurring, 10) === 0 ? 0 : 1;
+
+    const newStart = start_time !== undefined ? start_time : existing.start_time;
+    const newEnd = end_time !== undefined ? end_time : existing.end_time;
+    const newDay = day_of_week !== undefined ? parseInt(day_of_week, 10) : existing.day_of_week;
+
+    if (day_of_week !== undefined) {
+      if (isNaN(newDay) || newDay < 0 || newDay > 6) {
+        return res.status(400).json({ success: false, message: "day_of_week must be between 0 (Sunday) and 6 (Saturday)" });
+      }
+      updates.day_of_week = newDay;
+    }
+    if (start_time !== undefined) {
+      if (!TIME_FORMAT_RE.test(newStart)) {
+        return res.status(400).json({ success: false, message: "start_time must be a valid HH:MM value" });
+      }
+      updates.start_time = newStart;
+    }
+    if (end_time !== undefined) {
+      if (!TIME_FORMAT_RE.test(newEnd)) {
+        return res.status(400).json({ success: false, message: "end_time must be a valid HH:MM value" });
+      }
+      updates.end_time = newEnd;
+    }
+    if (newStart >= newEnd) {
+      return res.status(400).json({ success: false, message: "start_time must be earlier than end_time" });
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: "No changes provided" });
+    }
+
+    // Re-check conflicts whenever timing moves, excluding this row itself
+    if (updates.day_of_week !== undefined || updates.start_time !== undefined || updates.end_time !== undefined) {
+      const conflicts = await ClassSchedule.checkConflicts(existing.teacher_id, newStart, newEnd, newDay, id);
+      if (conflicts && conflicts.length > 0) {
+        return res.status(409).json({ success: false, message: "Schedule conflict detected", conflicts });
+      }
+    }
+
+    updates.updated_at = new Date().toISOString();
+    const result = await ClassSchedule.update(id, updates);
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, message: "Schedule not found or no changes made" });
+    }
+    res.json({ success: true, message: "Schedule updated successfully", changes: result.changes });
+  } catch (err) {
+    console.error(" Schedule update error:", err);
+    res.status(500).json({ success: false, message: "Failed to update schedule" });
+  }
+});
+
+// Delete a schedule (owner teacher or education admin)
+router.delete('/teacher/schedules/:id', authenticateToken, requireTeacherMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: "Invalid schedule id" });
+    }
+    const existing = await ClassSchedule.findById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Schedule not found" });
+    }
+    if (!isScheduleAdmin(req.user) && existing.teacher_id !== req.user.digital_id) {
+      return res.status(403).json({ success: false, message: "You can only delete your own schedules" });
+    }
+
+    const result = await ClassSchedule.delete(id);
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, message: "Schedule not found or already deleted" });
+    }
+    res.json({ success: true, message: "Schedule deleted successfully" });
+  } catch (err) {
+    console.error(" Schedule delete error:", err);
+    res.status(500).json({ success: false, message: "Failed to delete schedule" });
+  }
+});
 
 module.exports = router;

@@ -6,6 +6,7 @@
     <title>Class Schedule Management | Universal Attendance System</title>
     <link rel="stylesheet" href="/vendor/bootstrap.min.css">
     <link rel="stylesheet" href="/vendor/bootstrap-icons.css">
+    <link href="/vendor/fontawesome.all.min.css" rel="stylesheet">
     <style>
         .schedule-card {
             transition: all 0.3s ease;
@@ -57,50 +58,12 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <div class="text-center mb-4">
-                        <i class="bi bi-calendar-check d-block mb-3" style="font-size: 3rem; color: #ffffff;" aria-hidden="true"></i>
-                        <h5 class="text-white">Universal Attendance</h5>
-                        <p class="text-muted" id="userRole">Faculty Dashboard</p>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/pages/history.html">
-                                <i class="bi bi-calendar-check me-2"></i> Attendance History
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white active" href="/pages/class-schedule.html">
-                                <i class="bi bi-calendar3 me-2"></i> Class Schedule
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/pages/reports.html">
-                                <i class="bi bi-graph-up me-2"></i> Reports
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/pages/profile.html">
-                                <i class="bi bi-person-circle me-2"></i> Profile
-                            </a>
-                        </li>
-                        <li class="nav-item mt-5">
-                            <a class="nav-link text-danger" href="#" id="logoutBtn">
-                                <i class="bi bi-box-arrow-right me-2"></i> Logout
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+    <div class="container-fluid px-md-4">
 
             <!-- Main Content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <main class="px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Class Schedule Management</h1>
+                    <h1 class="h2">Class Schedule Management <span id="userRole" class="fs-6 fw-normal text-muted ms-2"></span></h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
                         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
                             <i class="bi bi-plus-circle me-1"></i> Add New Schedule
@@ -163,7 +126,6 @@
                     </div>
                 </div>
             </main>
-        </div>
     </div>
 
     <!-- Add/Edit Schedule Modal -->
@@ -272,6 +234,7 @@
     </div>
 
     <script src="/vendor/bootstrap.bundle.min.js"></script>
+    <script src="/js/sidebar.js"></script>
     <script src="/vendor/fullcalendar.global.min.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/class-schedule.js"></script>
