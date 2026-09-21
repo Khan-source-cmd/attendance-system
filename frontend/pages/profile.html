@@ -495,7 +495,9 @@
                 (user.industrytype || user.industry_type || user.industry).charAt(0).toUpperCase() + (user.industrytype || user.industry_type || user.industry).slice(1) : 'Not specified';
             document.getElementById('profileIndustry').textContent = industryType;
 
-            document.getElementById('navUserName').textContent = user.name ? user.name.split(' ')[0] : 'User';
+            // Update navbar username if present (legacy navbar pages / dashboards)
+            const navUserName = document.getElementById('navUserName');
+            if (navUserName) navUserName.textContent = user.name ? user.name.split(' ')[0] : 'User';
 
             // Personal information
             document.getElementById('infoName').textContent = user.name || 'Not provided';

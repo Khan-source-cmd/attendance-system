@@ -128,6 +128,8 @@ class DashboardNavigation {
         document.querySelectorAll('a[href]').forEach(link => {
             const href = link.getAttribute('href');
             if (!href) return;
+            // Never rewrite shared-sidebar deep links (#tabfn=... opens a dashboard tab)
+            if (href.includes('#tabfn=')) return;
             if (generics.some(g => href.includes(g)) && href !== correct) {
                 console.log('Navigation: Rewriting dashboard link', href, '->', correct);
                 link.setAttribute('href', correct);
