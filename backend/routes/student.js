@@ -21,6 +21,13 @@ function requireStudentMiddleware(req, res, next) {
   const isStudentRole = studentRoles.some(studentRole => role.includes(studentRole));
   const isEducationStudent = industry === 'education' && !role.includes('teacher') && !role.includes('admin') && !role.includes('faculty');
 
+  // Student features are education-only. Records without an industry_type are
+  // allowed through so legacy education accounts keep working.
+  if (industry && industry !== 'education') {
+    console.log(` Student access denied for non-education industry: ${industry} (user: ${req.user.digital_id})`);
+    return res.status(403).json({ success: false, message: "This feature is only available to education organizations" });
+  }
+
   if (!isStudentRole && !isEducationStudent) {
     console.log(` Student access denied for role: ${req.user.role}, industry: ${req.user.industry_type}`);
     return res.status(403).json({ success: false, message: "Student access required" });

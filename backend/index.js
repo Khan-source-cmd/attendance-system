@@ -517,6 +517,23 @@ function requireTeacher(req, res, next) {
   next();
 }
 
+// Education-industry guard for education-only endpoints (classes, students,
+// subjects, lectures). Users whose organization belongs to another industry are
+// rejected. Records with no industry_type are allowed through so legacy
+// education accounts keep working.
+function requireEducationIndustry(req, res, next) {
+  const industry = req.user && req.user.industry_type
+    ? String(req.user.industry_type).toLowerCase().trim()
+    : '';
+
+  if (industry && industry !== 'education') {
+    console.log(` Education-only endpoint denied for industry: ${industry} (user: ${req.user.digital_id})`);
+    return res.status(403).json({ success: false, message: 'This feature is only available to education organizations' });
+  }
+
+  next();
+}
+
 // ========== ROUTE MODULES ==========
 
 // Import route modules
@@ -634,7 +651,7 @@ app.get('/api/integrations/stats', authenticateToken, integrationController.getI
 // ========== REMAINING ROUTES ==========
 
 // Education industry specific endpoints
-app.get('/api/classes', authenticateToken, (req, res) => {
+app.get('/api/classes', authenticateToken, requireEducationIndustry, (req, res) => {
   const { include_subjects } = req.query;
   req.db.all('SELECT * FROM classes WHERE organization_id = ? AND is_active = 1', [req.user.organization_id || 2], (err, classes) => {
     if (err) {
@@ -737,7 +754,7 @@ app.get('/api/subjects', authenticateToken, (req, res) => {
   });
 });
 
-app.get('/api/classes/:classId/students', authenticateToken, (req, res) => {
+app.get('/api/classes/:classId/students', authenticateToken, requireEducationIndustry, (req, res) => {
   const { classId } = req.params;
   req.db.all('SELECT * FROM students WHERE class_id = ? AND is_active = 1', [classId], (err, students) => {
     if (err) {
@@ -749,7 +766,7 @@ app.get('/api/classes/:classId/students', authenticateToken, (req, res) => {
 });
 
 // Student schedule endpoint
-app.get('/api/student/schedule', authenticateToken, (req, res) => {
+app.get('/api/student/schedule', authenticateToken, requireEducationIndustry, (req, res) => {
   const { date } = req.query;
   const userId = req.user.digital_id;
   const organizationId = req.user.organization_id;
@@ -835,7 +852,7 @@ app.get('/api/student/schedule', authenticateToken, (req, res) => {
 // ========== STUDENT APIs ==========
 
 // Get available classes for student enrollment
-app.get('/api/student/available-classes', authenticateToken, (req, res) => {
+app.get('/api/student/available-classes', authenticateToken, requireEducationIndustry, (req, res) => {
   const organizationId = req.user.organization_id;
 
   console.log(` Getting available classes for student - Org: ${organizationId}`);
@@ -863,7 +880,7 @@ app.get('/api/student/available-classes', authenticateToken, (req, res) => {
 });
 
 // Enroll student in a class
-app.post('/api/student/enroll', authenticateToken, (req, res) => {
+app.post('/api/student/enroll', authenticateToken, requireEducationIndustry, (req, res) => {
   const { class_id } = req.body;
   const studentId = req.user.digital_id;
   const organizationId = req.user.organization_id;
@@ -926,7 +943,7 @@ app.post('/api/student/enroll', authenticateToken, (req, res) => {
 });
 
 // Get student's enrolled classes
-app.get('/api/student/enrolled-classes', authenticateToken, (req, res) => {
+app.get('/api/student/enrolled-classes', authenticateToken, requireEducationIndustry, (req, res) => {
   const studentId = req.user.digital_id;
   const organizationId = req.user.organization_id;
 
@@ -952,7 +969,7 @@ app.get('/api/student/enrolled-classes', authenticateToken, (req, res) => {
 });
 
 // Get student's subjects with faculty information
-app.get('/api/student/subjects', authenticateToken, (req, res) => {
+app.get('/api/student/subjects', authenticateToken, requireEducationIndustry, (req, res) => {
   const studentId = req.user.digital_id;
   const organizationId = req.user.organization_id;
 
@@ -983,7 +1000,7 @@ app.get('/api/student/subjects', authenticateToken, (req, res) => {
 });
 
 // Get attendance summary by subject
-app.get('/api/student/attendance/summary', authenticateToken, (req, res) => {
+app.get('/api/student/attendance/summary', authenticateToken, requireEducationIndustry, (req, res) => {
   const studentId = req.user.digital_id;
   const organizationId = req.user.organization_id;
 
@@ -1019,7 +1036,7 @@ app.get('/api/student/attendance/summary', authenticateToken, (req, res) => {
 });
 
 // Enroll student in class by class code
-app.post('/api/student/enroll-by-code', authenticateToken, (req, res) => {
+app.post('/api/student/enroll-by-code', authenticateToken, requireEducationIndustry, (req, res) => {
   const { class_code } = req.body;
   const studentId = req.user.digital_id;
   const organizationId = req.user.organization_id;
@@ -1144,7 +1161,7 @@ app.post('/api/student/enroll-by-code', authenticateToken, (req, res) => {
 });
 
 // Get upcoming lectures
-app.get('/api/student/upcoming-lectures', authenticateToken, (req, res) => {
+app.get('/api/student/upcoming-lectures', authenticateToken, requireEducationIndustry, (req, res) => {
   const studentId = req.user.digital_id;
   const organizationId = req.user.organization_id;
   const today = new Date().toISOString().split('T')[0];

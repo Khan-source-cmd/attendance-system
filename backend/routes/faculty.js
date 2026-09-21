@@ -27,6 +27,14 @@ function requireTeacherMiddleware(req, res, next) {
     return res.status(403).json({ success: false, message: "Teacher or admin access required" });
   }
 
+  // Teacher/faculty features are education-only. Records without an
+  // industry_type are allowed through so legacy education accounts keep working.
+  const industry = req.user.industry_type ? String(req.user.industry_type).toLowerCase().trim() : '';
+  if (industry && industry !== 'education') {
+    console.log(` Access denied for non-education industry: ${industry} (user: ${req.user.digital_id})`);
+    return res.status(403).json({ success: false, message: "This feature is only available to education organizations" });
+  }
+
   console.log(` Access granted for: ${req.user.digital_id} (${req.user.role})`);
   next();
 }

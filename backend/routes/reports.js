@@ -7,12 +7,27 @@ const express = require('express');
 const router = express.Router();
 
 // Import middleware
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticateToken, requireAdmin, requireEducationOrg } = require('../middleware/auth');
 
 // Enhanced industry-specific dashboard data
 router.get('/dashboard/:industry', authenticateToken, (req, res) => {
   const { industry } = req.params;
   const organizationId = req.user.organization_id;
+
+  // Cross-industry guard: a user may only request their own industry's data.
+  // Without this, any authenticated user could ask for another sector's
+  // dashboard payload just by changing the URL.
+  const userIndustry = String(
+    req.user.industry_type || req.user.industrytype || req.user.industry || ''
+  ).toLowerCase().trim();
+  const requestedIndustry = String(industry || '').toLowerCase().trim();
+
+  if (userIndustry && requestedIndustry && userIndustry !== requestedIndustry) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied: reports are limited to your own industry'
+    });
+  }
   
   // Get organization-specific data
   req.db.get(
@@ -61,14 +76,14 @@ router.get('/dashboard/:industry', authenticateToken, (req, res) => {
         organization: {
           name: org.name,
           type: org.type,
-          industry: industry
+          industry: requestedIndustry
         },
-        industry_data: industryData[industry] || { 
+        industry_data: industryData[requestedIndustry] || { 
           metrics: ['efficiency', 'compliance', 'performance'], 
           alerts: ['System update available'],
           quick_actions: ['Dashboard', 'Reports', 'Settings']
         },
-        message: `${industry} dashboard data retrieved for ${org.name}`
+        message: `${requestedIndustry} dashboard data retrieved for ${org.name}`
       });
     }
   );
@@ -298,8 +313,8 @@ router.get('/attendance-trends', authenticateToken, (req, res) => {
   });
 });
 
-// Get class attendance report (education industry)
-router.get('/class-attendance', authenticateToken, (req, res) => {
+// Get class attendance report (education industry only)
+router.get('/class-attendance', authenticateToken, requireEducationOrg, (req, res) => {
   const { class_id, start_date, end_date } = req.query;
   const organizationId = req.user.organization_id;
 
