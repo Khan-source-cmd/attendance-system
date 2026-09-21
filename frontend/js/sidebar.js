@@ -151,32 +151,112 @@
         }
     }
 
-function buildLinks(user, currentPage) {
-        function link(href, icon, label, options) {
-            options = options || {};
-            var isActive = currentPage === options.page ? ' active' : '';
-            var hidden = options.hidden ? ' style="display:none;"' : '';
-            return '<li class="nav-item"' + hidden + '>' +
-                '<a class="nav-link' + isActive + '" href="' + href + '">' +
-                '<i class="fas ' + icon + ' me-2"></i>' + label + '</a></li>';
+    // ---- Role x Industry link matrix -----------------------------------------
+    // Mirrors exactly what each dashboard's own sidebar shows for that role, so
+    // the SAME links appear on EVERY page. Sector tab entries (e.g. "Patient
+    // Management") are modals inside the sector dashboard, not standalone pages,
+    // so they link to the dashboard with #tabfn=<functionName>, which the
+    // dashboard uses to auto-open that tab on arrival.
+
+    function getLinks(user) {
+        var admin = isAdmin(user);
+        var dash = getDashboardUrl(user);
+        var ind = user.industry;
+        var MONITOR = '/pages/admin-attendance.html';
+        var HISTORY = '/pages/history.html';
+
+        function L(href, icon, label, page) { return { href: href, icon: icon, label: label, page: page }; }
+        function T(fn, icon, label) { return { href: dash + '#tabfn=' + fn, icon: icon, label: label, page: null }; }
+
+        var links = [L(dash, 'fa-tachometer-alt', 'Dashboard', 'dashboard')];
+
+        if (admin) {
+            links.push(L(MONITOR, 'fa-eye', 'Attendance Monitor', 'admin-attendance.html'));
         }
 
-        var html = '<ul class="nav flex-column">';
-        html += link(getDashboardUrl(user), 'fa-tachometer-alt', 'Dashboard');
-        html += link('/pages/history.html', 'fa-history', 'History', { page: 'history.html' });
-        html += link('/pages/profile.html', 'fa-user', 'Profile', { page: 'profile.html' });
-        html += link('/pages/settings.html', 'fa-cog', 'Settings', { page: 'settings.html' });
-        html += link('/pages/reports.html', 'fa-chart-bar', 'Reports',
-            { page: 'reports.html', hidden: !isAdmin(user), className: 'admin-only' });
-        html += link('/pages/faculty-classes.html', 'fa-chalkboard-teacher', 'Faculty Classes',
-            { page: 'faculty-classes.html', hidden: !isEducationStaff(user), className: 'education-only' });
-        html += link('/pages/class-management.html', 'fa-users-cog', 'Class Management',
-            { page: 'class-management.html', hidden: !isEducationStaff(user) || !isAdmin(user), className: 'education-only admin-only' });
-        html += link('/pages/integrations.html', 'fa-plug', 'Integrations', { page: 'integrations.html' });
-        html += '<li class="nav-item"><a class="nav-link" href="#" id="appSidebarLogout">' +
-                '<i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>';
-        html += '</ul>';
-        return html;
+        switch (ind + (admin ? '-admin' : '-user')) {
+            case 'education-admin':
+                links.push(L(HISTORY, 'fa-history', 'History', 'history.html'));
+                break;
+            case 'healthcare-admin':
+                links.push(L(HISTORY, 'fa-history', 'Shift History', 'history.html'));
+                links.push(T('manageShifts', 'fa-calendar-alt', 'Shift Scheduling'));
+                links.push(T('manageCompliance', 'fa-shield-alt', 'Compliance'));
+                links.push(T('managePatients', 'fa-user-injured', 'Patient Management'));
+                break;
+            case 'healthcare-user':
+                links.push(L(HISTORY, 'fa-history', 'Shift History', 'history.html'));
+                break;
+            case 'corporate-admin':
+                links.push(L(HISTORY, 'fa-history', 'Work History', 'history.html'));
+                links.push(T('manageProjects', 'fa-project-diagram', 'Project Management'));
+                links.push(T('manageProductivity', 'fa-chart-line', 'Productivity Analytics'));
+                links.push(T('manageMeetingRooms', 'fa-building', 'Meeting Rooms'));
+                break;
+            case 'corporate-user':
+                links.push(L(HISTORY, 'fa-history', 'Work History', 'history.html'));
+                links.push(T('showProjects', 'fa-project-diagram', 'My Projects'));
+                links.push(T('showMeetings', 'fa-calendar-check', 'Meetings'));
+                break;
+            case 'government-admin':
+                links.push(L(HISTORY, 'fa-history', 'Service History', 'history.html'));
+                links.push(T('managePublicService', 'fa-users', 'Public Service'));
+                links.push(T('manageCompliance', 'fa-clipboard-check', 'Compliance'));
+                links.push(T('manageDepartments', 'fa-building', 'Departments'));
+                break;
+            case 'government-user':
+                links.push(L(HISTORY, 'fa-history', 'Service History', 'history.html'));
+                links.push(T('showServiceDepartments', 'fa-building', 'Departments'));
+                links.push(T('showComplianceStatus', 'fa-clipboard-check', 'Compliance'));
+                break;
+            case 'manufacturing-admin':
+                links.push(L(HISTORY, 'fa-history', 'Work History', 'history.html'));
+                links.push(T('manageProduction', 'fa-industry', 'Production Monitoring'));
+                links.push(T('manageEquipment', 'fa-tools', 'Equipment Management'));
+                links.push(T('manageSafety', 'fa-shield-alt', 'Safety Compliance'));
+                break;
+            case 'manufacturing-user':
+                links.push(L(HISTORY, 'fa-history', 'Work History', 'history.html'));
+                links.push(T('showProductionLines', 'fa-industry', 'Production Lines'));
+                links.push(T('showShiftSchedule', 'fa-calendar-alt', 'Shift Schedule'));
+                break;
+            case 'retail-admin':
+                links.push(L(HISTORY, 'fa-history', 'Store History', 'history.html'));
+                links.push(T('manageStorePerformance', 'fa-chart-line', 'Store Performance'));
+                links.push(T('manageSalesAnalytics', 'fa-chart-bar', 'Sales Analytics'));
+                links.push(T('manageInventory', 'fa-boxes', 'Inventory'));
+                links.push(T('manageStaffScheduling', 'fa-calendar-alt', 'Staff Scheduling'));
+                break;
+            case 'retail-user':
+                links.push(L(HISTORY, 'fa-history', 'Work History', 'history.html'));
+                links.push(T('showStoreSections', 'fa-store', 'Store Sections'));
+                links.push(T('showSalesTargets', 'fa-bullseye', 'Sales Targets'));
+                break;
+            default: // education teacher/user handled below + generic History
+                links.push(L(HISTORY, 'fa-history', 'History', 'history.html'));
+                break;
+        }
+
+        links.push(L('/pages/profile.html', 'fa-user', 'Profile', 'profile.html'));
+        links.push(L('/pages/settings.html', 'fa-cog', 'Settings', 'settings.html'));
+
+        // Education-specific pages (role restricted)
+        var isTeacher = user.role.includes('teacher') || user.role.includes('professor') || user.role.includes('faculty');
+        if (ind === 'education' || isTeacher) {
+            if (admin) {
+                links.push(L('/pages/class-management.html', 'fa-chalkboard', 'Class Management', 'class-management.html'));
+                links.push(L('/pages/faculty-classes.html', 'fa-chalkboard-teacher', 'Faculty Classes', 'faculty-classes.html'));
+            } else if (isTeacher) {
+                links.push(L('/pages/teacher-dashboard.html', 'fa-graduation-cap', 'Teacher Portal', 'teacher-dashboard.html'));
+            }
+        }
+
+        if (admin) {
+            links.push(L('/pages/reports.html', 'fa-chart-bar', 'Reports', 'reports.html'));
+        }
+
+        links.push(L('/pages/integrations.html', 'fa-plug', 'Integrations', 'integrations.html'));
+        return links;
     }
 
     var DASHBOARD_PAGES = ['admin-dashboard.html', 'user-dashboard.html', 'teacher-dashboard.html',
@@ -191,12 +271,23 @@ function buildLinks(user, currentPage) {
         if (!user.token) return; // unauthenticated visitors: do nothing
 
         var page = window.location.pathname.split('/').pop().toLowerCase();
+        var links = getLinks(user);
         var sidebar = document.createElement('nav');
         sidebar.className = 'app-sidebar';
-        sidebar.innerHTML =
-            '<a href="' + getDashboardUrl(user) + '" class="sidebar-brand">' +
+
+        var html = '<a href="' + getDashboardUrl(user) + '" class="sidebar-brand">' +
             '<i class="fas fa-calendar-check me-2"></i>Universal Attendance</a>' +
-            buildLinks(user, page);
+            '<ul class="nav flex-column">';
+        links.forEach(function (l) {
+            var isActive = '';
+            if (l.page === 'dashboard' && DASHBOARD_PAGES.indexOf(page) !== -1) isActive = ' active';
+            else if (l.page && l.page === page) isActive = ' active';
+            html += '<li class="nav-item"><a class="nav-link' + isActive + '" href="' + l.href + '">' +
+                '<i class="fas ' + l.icon + ' me-2"></i>' + l.label + '</a></li>';
+        });
+        html += '<li class="nav-item"><a class="nav-link" href="#" id="appSidebarLogout">' +
+            '<i class="fas fa-sign-out-alt me-2"></i>Logout</a></li></ul>';
+        sidebar.innerHTML = html;
 
         var toggle = document.createElement('button');
         toggle.className = 'app-sidebar-toggle';
@@ -210,19 +301,6 @@ function buildLinks(user, currentPage) {
         document.body.insertBefore(overlay, document.body.firstChild);
         document.body.insertBefore(toggle, document.body.firstChild);
         document.body.classList.add('app-has-sidebar');
-
-        if (DASHBOARD_PAGES.indexOf(page) !== -1) {
-            var first = sidebar.querySelector('.nav-link');
-            if (first) first.classList.add('active');
-        }
-
-        // Hide admin-only / education-only links per role
-        if (!isAdmin(user)) {
-            sidebar.querySelectorAll('.admin-only').forEach(function (el) { el.style.display = 'none'; });
-        }
-        if (!isEducationStaff(user)) {
-            sidebar.querySelectorAll('.education-only').forEach(function (el) { el.style.display = 'none'; });
-        }
 
         toggle.addEventListener('click', function () {
             sidebar.classList.toggle('show');

@@ -4460,5 +4460,15 @@
             }
         }
     </script>
+
+    <script>
+        // Deep-link support for the shared sidebar (#tabfn=<functionName>)
+        (function () {
+            var fn = (window.location.hash.match(/tabfn=([A-Za-z0-9_]+)/) || [])[1];
+            if (fn && typeof window[fn] === 'function') {
+                try { window[fn](); } catch (e) { console.error('Failed to open tab:', e); }
+            }
+        })();
+    </script>
 </body>
 </html>
