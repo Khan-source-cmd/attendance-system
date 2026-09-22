@@ -397,7 +397,7 @@ function generateRetailContent() {
 async function loadTeacherFeatures() {
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/teacher/classes`, {
+    const response = await fetch(`${API_BASE}/api/faculty/teacher/classes`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -547,7 +547,7 @@ async function loadDashboardData() {
 async function loadOrganizationActivity() {
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/attendance-monitor`, {
+    const response = await fetch(`${API_BASE}/api/admin/attendance-monitor`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -617,7 +617,7 @@ async function loadRealTimeOrganizationStats() {
 
     // Enrich with REAL pending requests count and REAL classes count
     try {
-      const pendingResp = await fetch(`${API_BASE}/api/pending-requests`, {
+      const pendingResp = await fetch(`${API_BASE}/api/admin/pending-requests?limit=50`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (pendingResp.ok) {
@@ -878,7 +878,7 @@ async function quickPunch(punchType) {
       return;
     }
 
-    const response = await fetch(`${API_BASE}/api/punch`, {
+    const response = await fetch(`${API_BASE}/api/attendance/punch`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -962,7 +962,7 @@ async function quickPunchGPS(punchType) {
             return;
         }
 
-        const response = await fetch(`${API_BASE}/api/punch`, {
+        const response = await fetch(`${API_BASE}/api/attendance/punch`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1048,7 +1048,7 @@ async function processQRCode() {
       return;
     }
 
-    const response = await fetch(`${API_BASE}/api/punch-qr`, {
+    const response = await fetch(`${API_BASE}/api/attendance/punch-qr`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -1120,7 +1120,7 @@ async function submitManualPunch() {
       return;
     }
 
-    const response = await fetch(`${API_BASE}/api/punch`, {
+    const response = await fetch(`${API_BASE}/api/attendance/punch`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -1361,7 +1361,7 @@ function getCurrentLocation() {
 async function determinePunchType() {
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/history?limit=1`, {
+    const response = await fetch(`${API_BASE}/api/attendance/history?limit=1`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -1815,33 +1815,28 @@ function showManualPunchApprovals() {
   loadPendingApprovals();
 }
 
-function loadPendingApprovals() {
-  // Simulate loading pending manual punch requests
+async function loadPendingApprovals() {
+  // Real manual punch requests from the backend (pending_requests table)
   const pendingApprovals = document.getElementById('pendingApprovals');
+  if (!pendingApprovals) return;
 
-  // Mock data for demonstration
-  const mockRequests = [
-    {
-      id: 'req_001',
-      userId: 'EMP-1001',
-      userName: 'John Smith',
-      punchType: 'in',
-      requestedTime: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      reason: 'Arrived late due to traffic',
-      location: 'Main Office'
-    },
-    {
-      id: 'req_002',
-      userId: 'EMP-1005',
-      userName: 'Sarah Johnson',
-      punchType: 'out',
-      requestedTime: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
-      reason: 'Left early for medical appointment',
-      location: 'Branch Office'
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE}/api/admin/pending-requests?limit=10`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
-  ];
 
-  if (mockRequests.length === 0) {
+    const result = await response.json();
+    const requests = result.requests || [];
+
+  if (requests.length === 0) {
     pendingApprovals.innerHTML = `
       <div class="text-center py-4">
         <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -1852,22 +1847,22 @@ function loadPendingApprovals() {
     return;
   }
 
-  pendingApprovals.innerHTML = mockRequests.map(request => `
+  pendingApprovals.innerHTML = requests.map(request => `
     <div class="card mb-3">
       <div class="card-body">
         <div class="row align-items-center">
           <div class="col-md-6">
-            <h6 class="mb-1">${request.userName}</h6>
-            <p class="mb-1 text-muted small">ID: ${request.userId}</p>
+            <h6 class="mb-1">${request.user_name || request.digital_id}</h6>
+            <p class="mb-1 text-muted small">ID: ${request.digital_id}</p>
             <p class="mb-0 small">
-              <i class="fas fa-clock me-1"></i>${request.punchType.toUpperCase()} •
-              <i class="fas fa-map-marker-alt ms-2 me-1"></i>${request.location}
+              <i class="fas fa-clock me-1"></i>${(request.punch_type || 'unknown').toUpperCase()} •
+              <i class="fas fa-map-marker-alt ms-2 me-1"></i>${request.location_data ? 'Verified location' : 'No location'}
             </p>
           </div>
           <div class="col-md-4">
             <p class="mb-1"><strong>Reason:</strong></p>
-            <p class="text-muted small">${request.reason}</p>
-            <small class="text-muted">Requested: ${request.requestedTime.toLocaleTimeString()}</small>
+            <p class="text-muted small">${request.notes || request.reason || 'No reason provided'}</p>
+            <small class="text-muted">Requested: ${request.created_at_formatted || request.created_at}</small>
           </div>
           <div class="col-md-2">
             <div class="d-grid gap-2">
@@ -1883,30 +1878,73 @@ function loadPendingApprovals() {
       </div>
     </div>
   `).join('');
-}
-
-function approveManualPunch(requestId) {
-  showNotification(`Manual punch request ${requestId} approved successfully!`, 'success');
-  // Remove the approved request from the list
-  const requestCard = document.querySelector(`[onclick*="approveManualPunch('${requestId}')"]`);
-  if (requestCard) {
-    requestCard.closest('.card').remove();
+  } catch (error) {
+    console.error('Error loading pending approvals:', error);
+    pendingApprovals.innerHTML = `
+      <div class="alert alert-warning mb-0">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Could not load manual punch requests. Please try again.
+      </div>
+    `;
   }
-  // Reload approvals to check if list is empty
-  setTimeout(loadPendingApprovals, 500);
 }
 
-function rejectManualPunch(requestId) {
-  const reason = prompt('Enter rejection reason:');
-  if (reason) {
-    showNotification(`Manual punch request ${requestId} rejected.`, 'warning');
-    // Remove the rejected request from the list
-    const requestCard = document.querySelector(`[onclick*="rejectManualPunch('${requestId}')"]`);
-    if (requestCard) {
-      requestCard.closest('.card').remove();
+async function approveManualPunch(requestId) {
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE}/api/admin/pending-requests/${requestId}/approve`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ admin_notes: 'Approved from admin dashboard' })
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (response.ok && result && result.success) {
+      showNotification('Manual punch request approved successfully!', 'success');
+      loadPendingApprovals();
+      loadDashboardData();
+    } else {
+      showNotification((result && result.message) || 'Failed to approve request', 'danger');
     }
-    // Reload approvals to check if list is empty
-    setTimeout(loadPendingApprovals, 500);
+  } catch (error) {
+    console.error('Error approving manual punch:', error);
+    showNotification('Error approving manual punch request', 'danger');
+  }
+}
+
+async function rejectManualPunch(requestId) {
+  const reason = prompt('Enter rejection reason:');
+  if (!reason) {
+    showNotification('Rejection cancelled - reason is required', 'warning');
+    return;
+  }
+
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE}/api/admin/pending-requests/${requestId}/reject`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ admin_notes: reason })
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (response.ok && result && result.success) {
+      showNotification('Manual punch request rejected.', 'warning');
+      loadPendingApprovals();
+    } else {
+      showNotification((result && result.message) || 'Failed to reject request', 'danger');
+    }
+  } catch (error) {
+    console.error('Error rejecting manual punch:', error);
+    showNotification('Error rejecting manual punch request', 'danger');
   }
 }
 
@@ -2384,7 +2422,7 @@ async function showPendingApprovals() {
 async function loadPendingUsers() {
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/admin/pending-users`, {
+    const response = await fetch(`${API_BASE}/api/admin/users`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -2394,7 +2432,10 @@ async function loadPendingUsers() {
     if (response.ok) {
       const result = await response.json();
       if (result.success) {
-        displayPendingUsers(result.users);
+        // Registrations awaiting attention: backend auto-approves, so surface
+        // users who are not yet verified or not approved (stale registrations)
+        const pendingUsers = (result.users || []).filter(u => !u.is_approved || !u.is_verified);
+        displayPendingUsers(pendingUsers);
         return;
       }
     }
@@ -2447,10 +2488,10 @@ function displayPendingUsers(users) {
           </div>
           <div class="col-md-2">
             <div class="d-grid gap-2">
-              <button class="btn btn-success btn-sm" onclick="viewUserDetails('${user.id}')">
+              <button class="btn btn-success btn-sm" onclick="viewUserDetails('${user.digital_id}')">
                 <i class="fas fa-eye me-1"></i>Review
               </button>
-              <button class="btn btn-danger btn-sm" onclick="quickRejectUser('${user.id}')">
+              <button class="btn btn-danger btn-sm" onclick="quickRejectUser('${user.digital_id}')">
                 <i class="fas fa-times me-1"></i>Reject
               </button>
             </div>
@@ -2466,7 +2507,7 @@ function displayPendingUsers(users) {
 async function viewUserDetails(userId) {
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/admin/user-details/${userId}`, {
+    const response = await fetch(`${API_BASE}/api/admin/user/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -2527,15 +2568,15 @@ async function approveUser() {
 
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/admin/approve-user`, {
+    const response = await fetch(`${API_BASE}/api/admin/user-status`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        user_id: window.currentUserForApproval,
-        admin_notes: adminNotes
+        digital_id: window.currentUserForApproval,
+        is_approved: true
       })
     });
 
@@ -2568,16 +2609,15 @@ async function rejectUser() {
 
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/admin/reject-user`, {
+    const response = await fetch(`${API_BASE}/api/admin/user-status`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        user_id: window.currentUserForApproval,
-        rejection_reason: reason,
-        admin_notes: adminNotes
+        digital_id: window.currentUserForApproval,
+        is_approved: false
       })
     });
 
@@ -2607,16 +2647,15 @@ async function quickRejectUser(userId) {
 
   try {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/admin/reject-user`, {
+    const response = await fetch(`${API_BASE}/api/admin/user-status`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        user_id: userId,
-        rejection_reason: reason,
-        admin_notes: 'Quick rejection from pending list'
+        digital_id: userId,
+        is_approved: false
       })
     });
 
@@ -3757,17 +3796,13 @@ async function confirmOrganizationDeletion() {
     const token = getAuthToken();
     console.log('Marking organization setup as deleted:', setupId);
 
-    // Call the soft delete API endpoint (PATCH to mark as deleted)
-    const response = await fetch(`${API_BASE}/api/admin/organization-setup/${setupId}/delete`, {
-      method: 'PATCH',
+    // Soft-delete the organization setup record
+    const response = await fetch(`${API_BASE}/api/admin/organization-setup/${setupId}`, {
+      method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        deleted: true,
-        deleted_at: new Date().toISOString()
-      })
+      }
     });
 
     if (response.ok) {
