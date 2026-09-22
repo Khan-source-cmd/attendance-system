@@ -2290,7 +2290,7 @@
 
                 // Load students for this class
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/teacher/class/${classId}/students`, {
+                const response = await fetch(`${API_BASE}/api/faculty/teacher/class/${classId}/students`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -2392,7 +2392,7 @@
                 showAttendanceStatus('Saving attendance...', 'info');
 
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/teacher/class/${currentClassId}/attendance`, {
+                const response = await fetch(`${API_BASE}/api/faculty/teacher/class/${currentClassId}/attendance`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,

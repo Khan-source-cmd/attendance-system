@@ -1409,4 +1409,36 @@ router.delete('/teacher/schedules/:id', authenticateToken, requireTeacherMiddlew
   }
 });
 
+// A single student's education attendance history (org-scoped; used by the
+// teacher dashboard's student history modal and class management)
+router.get('/teacher/students/:studentId/attendance', authenticateToken, requireTeacherMiddleware, (req, res) => {
+  const studentId = req.params.studentId;
+  const organizationId = req.user.organization_id;
+
+  req.db.all(`
+    SELECT sa.date, sa.is_present, sa.late_arrival, sa.notes,
+           s.subject_name, c.class_name
+    FROM subject_attendance sa
+    JOIN class_subjects cs ON sa.class_subject_id = cs.id
+    JOIN classes c ON cs.class_id = c.id
+    LEFT JOIN subjects s ON cs.subject_id = s.id
+    WHERE sa.student_id = ? AND c.organization_id = ?
+    ORDER BY sa.date DESC
+    LIMIT 100
+  `, [studentId, organizationId], (err, rows) => {
+    if (err) {
+      console.error(" Student attendance history error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch student attendance" });
+    }
+    const attendance = rows.map(r => ({
+      date: r.date,
+      status: r.is_present ? 'present' : (r.late_arrival ? 'late' : 'absent'),
+      subject_name: r.subject_name,
+      class_name: r.class_name,
+      notes: r.notes
+    }));
+    res.json({ success: true, attendance });
+  });
+});
+
 module.exports = router;

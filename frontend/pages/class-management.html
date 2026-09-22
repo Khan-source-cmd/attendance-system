@@ -1229,15 +1229,10 @@
                     }
                 });
 
-                // If admin endpoint fails with 403, try regular classes endpoint
+                // If the admin endpoint denies access, stop honestly - there is
+                // no public per-class endpoint to fall back to
                 if (response.status === 403) {
-                    console.log('Admin access denied, trying regular classes endpoint...');
-                    response = await fetch(`${API_BASE}/api/classes/${classId}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
+                    console.log('Admin access denied for class details');
                 }
 
                 if (!response.ok) {

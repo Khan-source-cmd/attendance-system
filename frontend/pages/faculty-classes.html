@@ -335,7 +335,7 @@
                                 <button class="btn btn-outline-success btn-sm" onclick="showAssignClass('${faculty.id}')">
                                     <i class="fas fa-plus"></i>
                                 </button>
-                                <button class="btn btn-outline-warning btn-sm" onclick="editFaculty('${faculty.id}')">
+                                <button class="btn btn-outline-warning btn-sm" onclick="editFaculty('${faculty.faculty_id}')">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </div>
@@ -479,7 +479,7 @@
 
         // Edit faculty - manage roles and departments
         function editFaculty(facultyId) {
-            const faculty = facultyData.find(f => f.id === facultyId);
+            const faculty = facultyData.find(f => f.faculty_id === facultyId);
             if (!faculty) {
                 alert('Faculty member not found.');
                 return;
@@ -583,13 +583,18 @@
 
             try {
                 const token = getAuthToken();
-                const response = await fetch(`${API_BASE}/api/admin/users/${facultyId}`, {
+                const response = await fetch(`${API_BASE}/api/faculty/${facultyId}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(updateData)
+                    body: JSON.stringify({
+                        name: updateData.name,
+                        email: updateData.email,
+                        position: updateData.role,
+                        is_active: updateData.status
+                    })
                 });
 
                 if (response.ok) {
