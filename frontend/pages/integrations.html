@@ -14,7 +14,11 @@
         }
 
         .main-container {
-            padding: 2rem 0;
+            /* Horizontal padding is required: Bootstrap .row pulls itself 12px
+               outside its parent on both sides (negative gutters). With 0
+               padding the cards slid under the sidebar and overflowed the
+               right edge. */
+            padding: 2rem;
         }
 
         .org-card {
@@ -49,7 +53,7 @@
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: var(--brand-gradient, linear-gradient(135deg, #667eea, #764ba2));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -84,7 +88,7 @@
         }
 
         .org-header {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
+            background: var(--brand-gradient, linear-gradient(135deg, #2c3e50, #34495e));
             color: white;
             border-radius: 20px;
             padding: 2rem;
@@ -118,7 +122,7 @@
         }
 
         .connection-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: var(--brand-gradient, linear-gradient(135deg, #667eea, #764ba2));
             border: none;
             color: white;
             padding: 0.5rem 1rem;
@@ -162,7 +166,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #3498db, #2980b9);
+            background: var(--brand-gradient, linear-gradient(135deg, #3498db, #2980b9));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -186,7 +190,7 @@
         }
 
         .industry-badge {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: var(--brand-gradient, linear-gradient(135deg, #667eea, #764ba2));
             color: white;
             padding: 0.25rem 0.75rem;
             border-radius: 15px;
@@ -212,7 +216,7 @@
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: var(--brand-gradient, linear-gradient(135deg, #667eea, #764ba2));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -232,7 +236,7 @@
 
         @media (max-width: 768px) {
             .main-container {
-                padding: 1rem 0;
+                padding: 1rem;
             }
 
             .org-card, .member-card {
@@ -856,7 +860,7 @@
                         <h6 class="mb-3">Organization Structure</h6>
                         <div class="d-flex justify-content-center">
                             <div class="hierarchy-node">
-                                <div class="hierarchy-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                                <div class="hierarchy-avatar" style="background: var(--brand-gradient, linear-gradient(135deg, #667eea, #764ba2));">
                                     ${currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                                 </div>
                                 <div class="mt-2">

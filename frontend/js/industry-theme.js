@@ -141,6 +141,17 @@
     style.textContent = css;
     document.head.appendChild(style);
 
+    // ---- 1b. Expose the sector gradient as a CSS variable ----
+    // Shared pages that still carry hardcoded blue/purple gradients (the
+    // organization page) read var(--brand-gradient), so the sector palette
+    // applies there too. Semantic colours are deliberately NOT touched:
+    // connected=green / pending=orange buttons, role badges and hierarchy
+    // level colours keep their meaning.
+    document.documentElement.style.setProperty(
+        '--brand-gradient',
+        `linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%)`
+    );
+
     // ---- 2. Hide education-only sidebar items for non-education sectors ----
     const EDUCATION_ONLY = ['faculty-classes', 'class-management', 'class-schedule', 'teacher-dashboard', 'teacher-classes'];
     if (industry !== 'education') {
