@@ -1083,10 +1083,30 @@
             // Update time every second
             setInterval(updateCurrentTime, 1000);
 
-            // Update lecture status every minute for real-time updates
-            setInterval(() => {
-                if (scheduledLectures.length > 0) {
-                    displayScheduledLectures();
+            // Update lecture status every minute — fetch fresh data from API
+            setInterval(async () => {
+                try {
+                    const token = getAuthToken();
+                    if (!token) return;
+
+                    const response = await fetch(`${API_BASE}/api/faculty/teacher/subjects`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success) {
+                            teacherClasses = result.subjects;
+                            updateTeacherStats();
+                            displayClasses();
+                            loadScheduledLectures();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error refreshing teacher data:', error);
                 }
             }, 60000); // Update every minute
 
